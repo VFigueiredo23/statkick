@@ -13,9 +13,9 @@
 - O projeto precisa estar em um repositorio GitHub
 - A VPS precisa ter Docker Engine + Docker Compose Plugin
 - A pasta de deploy precisa existir na VPS, por exemplo `/opt/statkick`
-- O arquivo `.env` de producao precisa estar salvo na VPS e nao no GitHub
-- As portas `80` e `443` precisam estar liberadas
-- Os dominios `APP_DOMAIN` e `API_DOMAIN` precisam apontar para a VPS
+- O arquivo `.env` de deploy precisa estar salvo na VPS e nao no GitHub
+- Se usar deploy com dominio, as portas `80` e `443` precisam estar liberadas
+- Se usar deploy temporario por IP, as portas `3000` e `8000` precisam estar liberadas
 
 ## Secrets do GitHub
 
@@ -43,6 +43,8 @@ cp docker.env.prod.example .env
 ```
 
 Depois edite o `.env` com os valores reais do ambiente.
+
+Se ainda nao tiver dominio, use `docker.env.vps-ip.example` como base do `.env`.
 
 Se `curl` nao existir na VPS, instale-o para habilitar os smoke tests do deploy:
 
@@ -79,6 +81,7 @@ Se sua branch principal for outra, ajuste `.github/workflows/deploy.yml`.
 - O `.env`, `media/`, `videos/` e `clipes/` nao sao sobrescritos pelo pipeline
 - O deploy grava a versao publicada em `.deploy-version`
 - O script usa `docker compose up --build -d --wait`, suportado pela documentacao atual do Docker
+- O script detecta `DEPLOY_TARGET_MODE=ip` para operar sem dominio, ou assume `domain` para usar proxy e TLS
 
 Referencias oficiais:
 

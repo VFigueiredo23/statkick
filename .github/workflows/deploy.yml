@@ -22,10 +22,14 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Validate compose config
-        run: docker compose --env-file docker.env.prod.example -f docker-compose.yml -f docker-compose.prod.yml config
+        run: |
+          docker compose --env-file docker.env.prod.example -f docker-compose.yml -f docker-compose.prod.yml config
+          docker compose --env-file docker.env.vps-ip.example -f docker-compose.yml -f docker-compose.vps-ip.yml config
 
       - name: Build production images
-        run: docker compose --env-file docker.env.prod.example -f docker-compose.yml -f docker-compose.prod.yml build backend frontend
+        run: |
+          docker compose --env-file docker.env.prod.example -f docker-compose.yml -f docker-compose.prod.yml build backend frontend
+          docker compose --env-file docker.env.vps-ip.example -f docker-compose.yml -f docker-compose.vps-ip.yml build backend frontend
 
   deploy:
     name: Deploy

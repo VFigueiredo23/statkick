@@ -84,6 +84,36 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f caddy ba
 - Backend API: `https://API_DOMAIN`
 - Admin Django: `https://API_DOMAIN/admin/`
 
+## Ambiente de VPS sem dominio
+
+Enquanto o dominio nao estiver definido, voce pode operar temporariamente por IP.
+
+### 1. Configurar variaveis para IP publico
+
+```bash
+cd /Users/cor/Statkick
+cp docker.env.vps-ip.example .env
+```
+
+Preencha o `.env` com o IP real da VPS em:
+- `PUBLIC_IP`
+- `DJANGO_ALLOWED_HOSTS`
+- `DJANGO_CORS_ALLOWED_ORIGINS`
+- `DJANGO_CSRF_TRUSTED_ORIGINS`
+- `NEXT_PUBLIC_API_URL`
+
+### 2. Subir por IP
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.vps-ip.yml up --build -d
+```
+
+### 3. URLs por IP
+
+- Frontend: `http://IP_DA_VPS:3000`
+- Backend API: `http://IP_DA_VPS:8000`
+- Admin Django: `http://IP_DA_VPS:8000/admin/`
+
 ### Teste local com stack de producao
 
 Se voce subir com `docker-compose.prod.yml` mas ainda estiver acessando por `localhost`, ajuste o `.env` para o ambiente local:

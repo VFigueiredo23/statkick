@@ -2,8 +2,11 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPOSE_ARGS=(-f docker-compose.yml -f docker-compose.prod.yml)
 DEPLOY_WAIT_TIMEOUT="${DEPLOY_WAIT_TIMEOUT:-180}"
+DEPLOY_TARGET_MODE="${DEPLOY_TARGET_MODE:-}"
+
+compose_args=()
+log_services=()
 
 log() {
   printf '[deploy] %s\n' "$*"
@@ -20,9 +23,25 @@ read_env_value() {
   ' "$ROOT_DIR/.env"
 }
 
+configure_deploy_mode() {
+  if [[ -z "$DEPLOY_TARGET_MODE" ]]; then
+    DEPLOY_TARGET_MODE="$(read_env_value DEPLOY_TARGET_MODE)"
+  fi
+
+  if [[ "$DEPLOY_TARGET_MODE" == "ip" ]]; then
+    compose_args=(-f docker-compose.yml -f docker-compose.vps-ip.yml)
+    log_services=(backend frontend)
+    return
+  fi
+
+  DEPLOY_TARGET_MODE="domain"
+  compose_args=(-f docker-compose.yml -f docker-compose.prod.yml)
+  log_services=(caddy backend frontend)
+}
+
 show_logs_on_error() {
   log "deploy falhou; exibindo logs recentes"
-  docker compose "${COMPOSE_ARGS[@]}" logs --tail=80 caddy backend frontend || true
+  docker compose "${compose_args[@]}" logs --tail=80 "${log_services[@]}" || true
 }
 
 trap show_logs_on_error ERR
@@ -34,13 +53,15 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+configure_deploy_mode
+
 if ! command -v docker >/dev/null 2>&1; then
   log "docker nao encontrado na VPS"
   exit 1
 fi
 
-log "subindo stack de producao"
-docker compose "${COMPOSE_ARGS[@]}" up --build -d --remove-orphans --wait --wait-timeout "$DEPLOY_WAIT_TIMEOUT"
+log "subindo stack (${DEPLOY_TARGET_MODE})"
+docker compose "${compose_args[@]}" up --build -d --remove-orphans --wait --wait-timeout "$DEPLOY_WAIT_TIMEOUT"
 
 if command -v curl >/dev/null 2>&1; then
   APP_DOMAIN="$(read_env_value APP_DOMAIN)"
@@ -52,14 +73,14 @@ if command -v curl >/dev/null 2>&1; then
   log "validando backend interno"
   curl -fsS http://127.0.0.1:8000/partidas >/dev/null
 
-  if [[ -n "${APP_DOMAIN:-}" ]]; then
+  if [[ "$DEPLOY_TARGET_MODE" == "domain" && -n "${APP_DOMAIN:-}" ]]; then
     log "validando proxy do frontend"
     curl --fail --silent --show-error \
       --resolve "${APP_DOMAIN}:443:127.0.0.1" \
       "https://${APP_DOMAIN}/" >/dev/null
   fi
 
-  if [[ -n "${API_DOMAIN:-}" ]]; then
+  if [[ "$DEPLOY_TARGET_MODE" == "domain" && -n "${API_DOMAIN:-}" ]]; then
     log "validando proxy da API"
     curl --fail --silent --show-error \
       --resolve "${API_DOMAIN}:443:127.0.0.1" \
@@ -76,6 +97,6 @@ DEPLOY_GIT_REF=${DEPLOY_GIT_REF:-unknown}
 EOF
 
 log "status final"
-docker compose "${COMPOSE_ARGS[@]}" ps
+docker compose "${compose_args[@]}" ps
 
 log "deploy concluido"
