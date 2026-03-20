@@ -36,4 +36,4 @@ class AvaliacaoJogadorViewSet(viewsets.ModelViewSet):
         if jogador_id:
             queryset = queryset.filter(jogador_id=jogador_id)
 
-         return queryset
+        return queryset

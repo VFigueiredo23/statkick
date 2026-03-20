@@ -12,6 +12,22 @@ log() {
   printf '[deploy] %s\n' "$*"
 }
 
+retry_http_check() {
+  local description="$1"
+  shift
+
+  for attempt in $(seq 1 20); do
+    if "$@" >/dev/null 2>&1; then
+      log "${description} ok"
+      return 0
+    fi
+    sleep 2
+  done
+
+  log "${description} falhou apos varias tentativas"
+  "$@"
+}
+
 read_env_value() {
   local key="$1"
   awk -F= -v search_key="$key" '
@@ -67,24 +83,22 @@ if command -v curl >/dev/null 2>&1; then
   APP_DOMAIN="$(read_env_value APP_DOMAIN)"
   API_DOMAIN="$(read_env_value API_DOMAIN)"
 
-  log "validando frontend interno"
-  curl -fsS http://127.0.0.1:3000/ >/dev/null
+  retry_http_check "frontend interno" curl -fsS http://127.0.0.1:3000/
 
-  log "validando backend interno"
-  curl -fsS http://127.0.0.1:8000/partidas >/dev/null
+  retry_http_check "backend interno" curl -fsS http://127.0.0.1:8000/partidas
 
   if [[ "$DEPLOY_TARGET_MODE" == "domain" && -n "${APP_DOMAIN:-}" ]]; then
-    log "validando proxy do frontend"
-    curl --fail --silent --show-error \
+    retry_http_check "proxy do frontend" \
+      curl --fail --silent --show-error \
       --resolve "${APP_DOMAIN}:443:127.0.0.1" \
-      "https://${APP_DOMAIN}/" >/dev/null
+      "https://${APP_DOMAIN}/"
   fi
 
   if [[ "$DEPLOY_TARGET_MODE" == "domain" && -n "${API_DOMAIN:-}" ]]; then
-    log "validando proxy da API"
-    curl --fail --silent --show-error \
+    retry_http_check "proxy da API" \
+      curl --fail --silent --show-error \
       --resolve "${API_DOMAIN}:443:127.0.0.1" \
-      "https://${API_DOMAIN}/partidas" >/dev/null
+      "https://${API_DOMAIN}/partidas"
   fi
 else
   log "curl nao encontrado; pulando smoke tests HTTP"

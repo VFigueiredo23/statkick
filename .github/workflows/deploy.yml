@@ -74,13 +74,15 @@ jobs:
             --exclude '.env' \
             --exclude '.git' \
             --exclude '.github' \
+            --exclude '.venv' \
+            --exclude 'backend/.venv' \
             --exclude 'backend/__pycache__' \
             --exclude 'backend/**/*.pyc' \
             --exclude 'frontend/node_modules' \
             --exclude 'frontend/.next' \
-            --exclude 'media' \
-            --exclude 'videos' \
-            --exclude 'clipes' \
+            --exclude '/media/' \
+            --exclude '/videos/' \
+            --exclude '/clipes/' \
             -e "ssh -p ${VPS_PORT:-22}" \
             ./ "${VPS_USER}@${VPS_HOST}:${VPS_PATH}"
 
