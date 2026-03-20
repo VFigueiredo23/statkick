@@ -2,6 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from equipes.models import Equipe
+from organizacoes.contexto import obter_organizacao_atual
 from partidas.models import Partida
 
 
@@ -15,6 +16,15 @@ class PartidaSerializer(serializers.ModelSerializer):
     arquivo_video = serializers.FileField(required=False, allow_null=True)
     data = serializers.DateTimeField(required=False)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request is None:
+            return
+        organizacao = obter_organizacao_atual(request)
+        self.fields["equipe_casa"].queryset = Equipe.objects.filter(organizacao=organizacao)
+        self.fields["equipe_fora"].queryset = Equipe.objects.filter(organizacao=organizacao)
+
     def to_representation(self, instance):
         dados = super().to_representation(instance)
         if instance.tipo_video == Partida.TIPO_VIDEO_UPLOAD and instance.arquivo_video:
@@ -22,7 +32,14 @@ class PartidaSerializer(serializers.ModelSerializer):
         return dados
 
     def _resolver_equipe_por_nome(self, nome: str) -> Equipe:
-        equipe, _ = Equipe.objects.get_or_create(nome=nome.strip())
+        request = self.context.get("request")
+        if request is None:
+            raise serializers.ValidationError("Request ausente para resolver equipe.")
+        organizacao = obter_organizacao_atual(request)
+        equipe, _ = Equipe.objects.get_or_create(
+            organizacao=organizacao,
+            nome=nome.strip(),
+        )
         return equipe
 
     def validate(self, attrs):

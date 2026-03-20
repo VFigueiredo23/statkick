@@ -19,7 +19,7 @@ class AvaliacaoJogadorInline(admin.TabularInline):
 
 @admin.register(Jogador)
 class JogadorAdmin(admin.ModelAdmin):
-    list_display = ("id", "nome", "equipe", "independente", "categoria_organizacao")
-    list_filter = ("independente", "posicao")
-    search_fields = ("nome", "equipe__nome", "categoria_organizacao", "informacoes_analista")
+    list_display = ("id", "nome", "organizacao", "equipe", "independente", "categoria_organizacao")
+    list_filter = ("organizacao", "independente", "posicao")
+    search_fields = ("nome", "organizacao__nome", "equipe__nome", "categoria_organizacao", "informacoes_analista")
     inlines = [AvaliacaoJogadorInline]

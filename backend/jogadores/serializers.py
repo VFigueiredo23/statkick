@@ -1,10 +1,19 @@
 from rest_framework import serializers
 
 from jogadores.models import AvaliacaoJogador, Jogador
+from organizacoes.contexto import obter_organizacao_atual
 
 
 class AvaliacaoJogadorSerializer(serializers.ModelSerializer):
     nota_geral = serializers.SerializerMethodField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request is None:
+            return
+        organizacao = obter_organizacao_atual(request)
+        self.fields["jogador"].queryset = Jogador.objects.filter(organizacao=organizacao)
 
     def get_nota_geral(self, obj: AvaliacaoJogador) -> int:
         return obj.nota_geral
@@ -41,18 +50,34 @@ class JogadorSerializer(serializers.ModelSerializer):
 
         return super().to_internal_value(data)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request is None:
+            return
+        organizacao = obter_organizacao_atual(request)
+        self.fields["equipe"].queryset = self.fields["equipe"].queryset.filter(organizacao=organizacao)
+
     def validate(self, attrs):
         independente = attrs.get("independente")
         equipe = attrs.get("equipe")
+        organizacao = None
+        request = self.context.get("request")
+        if request is not None:
+            organizacao = obter_organizacao_atual(request)
 
         if self.instance is not None:
             if independente is None:
                 independente = self.instance.independente
             if equipe is None:
                 equipe = self.instance.equipe
+            if organizacao is None:
+                organizacao = self.instance.organizacao
 
         if not independente and equipe is None:
             raise serializers.ValidationError("Jogador nao independente precisa ter equipe vinculada.")
+        if equipe is not None and organizacao is not None and equipe.organizacao_id != organizacao.id:
+            raise serializers.ValidationError("Equipe precisa pertencer a mesma organizacao do jogador.")
 
         return attrs
 

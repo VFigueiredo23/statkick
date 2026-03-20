@@ -3,6 +3,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
 from jogadores.models import AvaliacaoJogador, Jogador
 from jogadores.serializers import AvaliacaoJogadorSerializer, JogadorSerializer
+from organizacoes.contexto import obter_organizacao_atual
 
 
 class JogadorViewSet(viewsets.ModelViewSet):
@@ -10,7 +11,13 @@ class JogadorViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
-        queryset = Jogador.objects.select_related("equipe").prefetch_related("avaliacoes").all().order_by("nome")
+        organizacao = obter_organizacao_atual(self.request)
+        queryset = (
+            Jogador.objects.select_related("equipe")
+            .prefetch_related("avaliacoes")
+            .filter(organizacao=organizacao)
+            .order_by("nome")
+        )
         equipe_id = self.request.query_params.get("equipe")
         independente = self.request.query_params.get("independente")
         termo = self.request.query_params.get("q")
@@ -25,15 +32,22 @@ class JogadorViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(nome__icontains=termo)
         return queryset
 
+    def perform_create(self, serializer):
+        serializer.save(organizacao=obter_organizacao_atual(self.request))
+
 
 class AvaliacaoJogadorViewSet(viewsets.ModelViewSet):
     serializer_class = AvaliacaoJogadorSerializer
 
     def get_queryset(self):
-        queryset = AvaliacaoJogador.objects.select_related("jogador", "jogador__equipe").all()
+        organizacao = obter_organizacao_atual(self.request)
+        queryset = AvaliacaoJogador.objects.select_related("jogador", "jogador__equipe").filter(organizacao=organizacao)
         jogador_id = self.request.query_params.get("jogador")
 
         if jogador_id:
             queryset = queryset.filter(jogador_id=jogador_id)
 
         return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(organizacao=obter_organizacao_atual(self.request))

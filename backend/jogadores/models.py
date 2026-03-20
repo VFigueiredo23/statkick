@@ -4,9 +4,11 @@ from django.db import models
 from django.utils import timezone
 
 from equipes.models import Equipe
+from organizacoes.models import Organizacao
 
 
 class Jogador(models.Model):
+    organizacao = models.ForeignKey(Organizacao, on_delete=models.CASCADE, related_name="jogadores")
     nome = models.CharField(max_length=255)
     posicao = models.CharField(max_length=50)
     equipe = models.ForeignKey(Equipe, on_delete=models.CASCADE, related_name="jogadores", null=True, blank=True)
@@ -19,12 +21,15 @@ class Jogador(models.Model):
     def clean(self):
         if not self.independente and self.equipe is None:
             raise ValidationError({"equipe": "Jogador nao independente precisa ter equipe vinculada."})
+        if self.equipe_id and self.organizacao_id and self.equipe.organizacao_id != self.organizacao_id:
+            raise ValidationError({"equipe": "Equipe precisa pertencer a mesma organizacao do jogador."})
 
     def __str__(self) -> str:
         return self.nome
 
 
 class AvaliacaoJogador(models.Model):
+    organizacao = models.ForeignKey(Organizacao, on_delete=models.CASCADE, related_name="avaliacoes_jogadores")
     jogador = models.ForeignKey(Jogador, on_delete=models.CASCADE, related_name="avaliacoes")
     data_avaliacao = models.DateTimeField(default=timezone.now)
     observacoes = models.TextField(blank=True)
@@ -39,6 +44,10 @@ class AvaliacaoJogador(models.Model):
         ordering = ["-data_avaliacao", "-id"]
         verbose_name = "avaliacao do jogador"
         verbose_name_plural = "avaliacoes dos jogadores"
+
+    def clean(self):
+        if self.jogador_id and self.organizacao_id and self.jogador.organizacao_id != self.organizacao_id:
+            raise ValidationError({"jogador": "Jogador precisa pertencer a mesma organizacao da avaliacao."})
 
     @property
     def nota_geral(self) -> int:
