@@ -37,6 +37,11 @@ function formatarCronometro(segundos: number): string {
   return `${minutos}:${resto}`;
 }
 
+function formatarZona(posicao: { x: number; y: number } | null) {
+  if (!posicao) return null;
+  return `${Math.round(posicao.x)}% x ${Math.round(posicao.y)}%`;
+}
+
 export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
   const { partidaId } = use(params);
   const { organizacaoAtual } = useAuth();
@@ -255,46 +260,86 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
   }
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6">
+    <main className="mx-auto flex max-w-[1600px] flex-col gap-5 px-4 py-6 lg:px-6">
       <CabecalhoAnalise
         equipeCasa={partida.equipe_casa_nome || "Casa"}
         equipeFora={partida.equipe_fora_nome || "Fora"}
         competicao={partida.competicao}
         tempoJogo={formatarCronometro(segundosVideo)}
-      />
-
-      <PainelContextoAnalise
-        equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
-        jogadores={jogadoresDaPartida}
-        configuracoes={configuracoesAnalise}
-        equipeAtivaId={equipeAtivaId}
-        jogadorAtivoId={jogadorAtivoId}
-        aoSelecionarEquipe={selecionarEquipeAtiva}
-        aoSelecionarJogador={setJogadorAtivoId}
+        totalEventos={eventos.length}
+        focoAtual={jogadorAtivoId ? jogadoresDaPartida.find((jogador) => jogador.id === jogadorAtivoId)?.nome || "Jogador" : equipeAtivaId ? equipes.find((equipe) => equipe.id === equipeAtivaId)?.nome || "Equipe" : "Sem foco"}
+        zonaAtual={formatarZona(posicaoSelecionada)}
         aoReconfigurar={() => setModalConfiguracaoAberto(true)}
-        salvandoEvento={salvandoEvento}
-        feedback={feedbackEvento}
       />
 
       {erroOperacao && <p className="rounded-lg border border-red-500/40 bg-red-950/40 p-3 text-sm text-red-200">{erroOperacao}</p>}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
-        <BarraEventos aoSelecionarEvento={marcarEventoRapido} desabilitado={!podeEditarConteudo} />
-        <ReprodutorVideo url={partida.url_video} aoAtualizarTempo={setSegundosVideo} />
+      <div className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+        <aside className="xl:sticky xl:top-6 xl:self-start">
+          <div className="flex flex-col gap-5">
+            <PainelContextoAnalise
+              equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
+              jogadores={jogadoresDaPartida}
+              configuracoes={configuracoesAnalise}
+              equipeAtivaId={equipeAtivaId}
+              jogadorAtivoId={jogadorAtivoId}
+              aoSelecionarEquipe={selecionarEquipeAtiva}
+              aoSelecionarJogador={setJogadorAtivoId}
+              aoReconfigurar={() => setModalConfiguracaoAberto(true)}
+              salvandoEvento={salvandoEvento}
+              feedback={feedbackEvento}
+            />
+            <BarraEventos aoSelecionarEvento={marcarEventoRapido} desabilitado={!podeEditarConteudo} />
+          </div>
+        </aside>
+
+        <section className="flex min-w-0 flex-col gap-5">
+          <section className="rounded-[28px] border border-slate-700/70 bg-panel p-4 shadow-[0_18px_50px_rgba(2,6,23,0.24)] lg:p-5">
+            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Mesa de Video</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">Playback e quadro tatico</h2>
+                <p className="mt-1 text-sm text-slate-400">Video central com desenho tatico, relogio e marcacao rapida acoplados ao fluxo da analise.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/45 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Foco</p>
+                  <p className="mt-2 text-sm font-medium text-white">
+                    {jogadorAtivoId
+                      ? jogadoresDaPartida.find((jogador) => jogador.id === jogadorAtivoId)?.nome || "Jogador"
+                      : equipeAtivaId
+                        ? equipes.find((equipe) => equipe.id === equipeAtivaId)?.nome || "Equipe"
+                        : "Sem foco"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/45 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Zona pronta</p>
+                  <p className="mt-2 text-sm font-medium text-white">{formatarZona(posicaoSelecionada) || "Nao definida"}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/45 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Modo</p>
+                  <p className="mt-2 text-sm font-medium text-white">{podeEditarConteudo ? "Analise ativa" : "Somente leitura"}</p>
+                </div>
+              </div>
+            </div>
+
+            <ReprodutorVideo url={partida.url_video} aoAtualizarTempo={setSegundosVideo} />
+          </section>
+
+          <PainelAnaliseEspacial
+            equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
+            jogadores={jogadoresDaPartida}
+            eventos={eventos}
+            equipeAtivaId={equipeAtivaId}
+            jogadorAtivoId={jogadorAtivoId}
+            posicaoSelecionada={posicaoSelecionada}
+            aoSelecionarPosicao={setPosicaoSelecionada}
+            aoLimparPosicao={() => setPosicaoSelecionada(null)}
+          />
+
+          <LinhaTempoEventos eventos={eventos} />
+        </section>
       </div>
-
-      <PainelAnaliseEspacial
-        equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
-        jogadores={jogadoresDaPartida}
-        eventos={eventos}
-        equipeAtivaId={equipeAtivaId}
-        jogadorAtivoId={jogadorAtivoId}
-        posicaoSelecionada={posicaoSelecionada}
-        aoSelecionarPosicao={setPosicaoSelecionada}
-        aoLimparPosicao={() => setPosicaoSelecionada(null)}
-      />
-
-      <LinhaTempoEventos eventos={eventos} />
 
       <ModalConfiguracaoAnalise
         aberto={modalConfiguracaoAberto}

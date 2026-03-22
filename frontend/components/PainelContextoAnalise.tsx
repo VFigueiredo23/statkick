@@ -41,24 +41,48 @@ export default function PainelContextoAnalise({
   const jogadorAtivo = jogadores.find((jogador) => jogador.id === jogadorAtivoId) ?? null;
 
   return (
-    <section className="rounded-xl border border-slate-700 bg-panel p-4">
+    <section className="rounded-[28px] border border-slate-700/70 bg-panel p-4 shadow-[0_14px_40px_rgba(2,6,23,0.22)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-slate-300">Contexto da marcacao</h2>
-          <p className="mt-1 text-sm text-slate-400">Selecione o alvo uma vez e clique nos eventos para salvar direto.</p>
+          <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Centro de Controle</p>
+          <h2 className="mt-2 text-xl font-semibold text-white">Foco da analise</h2>
+          <p className="mt-1 text-sm text-slate-400">Defina quem esta no radar antes de marcar o lance.</p>
         </div>
-        <button type="button" className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200" onClick={aoReconfigurar}>
-          Reconfigurar foco
+        <button
+          type="button"
+          className="rounded-2xl border border-slate-600 bg-slate-950/40 px-3 py-2 text-xs font-medium text-slate-100"
+          onClick={aoReconfigurar}
+        >
+          Reconfigurar
         </button>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Escopo</p>
+            <p className="mt-2 text-sm font-medium text-white">{equipesAnalisadas.length ? `${equipesAnalisadas.length} equipe(s)` : "Sem escopo"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Alvo</p>
+            <p className="mt-2 text-sm font-medium text-white">{jogadorAtivo ? jogadorAtivo.nome : equipeAtiva?.nome ?? "Sem foco"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Status</p>
+            <p className="mt-2 text-sm font-medium text-white">
+              {salvandoEvento ? "Salvando evento..." : feedback ?? (semFocoDefinido ? "Modo observacao" : "Pronto para marcar")}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2">
         {equipes.map((equipe) => {
           const configuracaoEquipe = configuracoes.find((item) => item.equipeId === equipe.id);
           if (configuracaoEquipe?.modo === "nenhum") {
             return (
-              <div key={equipe.id} className="rounded-lg border border-dashed border-slate-800 px-3 py-3 text-left text-slate-500">
-                <p className="text-xs uppercase tracking-wide">Fora do escopo</p>
+              <div key={equipe.id} className="rounded-2xl border border-dashed border-slate-800 px-3 py-3 text-left text-slate-500">
+                <p className="text-[11px] uppercase tracking-[0.3em]">Fora do escopo</p>
                 <p className="mt-1 text-base font-semibold">{equipe.nome}</p>
               </div>
             );
@@ -70,21 +94,28 @@ export default function PainelContextoAnalise({
               key={equipe.id}
               type="button"
               disabled={semFocoDefinido}
-              className={`rounded-lg border px-3 py-3 text-left transition ${
-                ativa ? "border-accent bg-accent/15 text-white" : "border-slate-700 text-slate-300 hover:border-slate-500"
+              className={`rounded-2xl border px-4 py-3 text-left transition ${
+                ativa
+                  ? "border-accent bg-[linear-gradient(135deg,rgba(34,197,94,0.18),rgba(15,23,42,0.4))] text-white shadow-[0_10px_30px_rgba(34,197,94,0.12)]"
+                  : "border-slate-700 bg-slate-950/35 text-slate-300 hover:border-slate-500"
               }`}
               onClick={() => aoSelecionarEquipe(equipe.id)}
             >
-              <p className="text-xs uppercase tracking-wide text-slate-400">Equipe ativa</p>
-              <p className="mt-1 text-base font-semibold">{equipe.nome}</p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">{ativa ? "Equipe em foco" : "Equipe habilitada"}</p>
+                  <p className="mt-1 text-base font-semibold">{equipe.nome}</p>
+                </div>
+                {ativa && <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">Ativa</span>}
+              </div>
             </button>
           );
         })}
       </div>
 
-      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/50 p-3">
-        <p className="text-xs uppercase tracking-wide text-slate-400">Alvo atual</p>
-        <p className="mt-1 text-sm text-slate-200">
+      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+        <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Selecao fina</p>
+        <p className="mt-2 text-sm text-slate-200">
           {semFocoDefinido ? "Sem foco definido" : `${equipeAtiva?.nome ?? "Equipe"} / ${jogadorAtivo ? jogadorAtivo.nome : "Equipe inteira"}`}
         </p>
 
@@ -93,7 +124,9 @@ export default function PainelContextoAnalise({
             type="button"
             disabled={semFocoDefinido}
             className={`rounded-full border px-3 py-1.5 text-sm transition ${
-              jogadorAtivoId === null ? "border-accent bg-accent/15 text-white" : "border-slate-700 text-slate-300 hover:border-slate-500"
+              jogadorAtivoId === null
+                ? "border-accent bg-accent/15 text-white"
+                : "border-slate-700 bg-slate-950/40 text-slate-300 hover:border-slate-500"
             }`}
             onClick={() => aoSelecionarJogador(null)}
           >
@@ -106,7 +139,9 @@ export default function PainelContextoAnalise({
               type="button"
               disabled={semFocoDefinido}
               className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                jogador.id === jogadorAtivoId ? "border-accent bg-accent/15 text-white" : "border-slate-700 text-slate-300 hover:border-slate-500"
+                jogador.id === jogadorAtivoId
+                  ? "border-accent bg-accent/15 text-white"
+                  : "border-slate-700 bg-slate-950/40 text-slate-300 hover:border-slate-500"
               }`}
               onClick={() => aoSelecionarJogador(jogador.id)}
             >
@@ -116,14 +151,10 @@ export default function PainelContextoAnalise({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-3">
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/35 px-3 py-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-400">Status</p>
-          <p className="text-sm text-slate-200">
-            {salvandoEvento
-              ? "Salvando evento..."
-              : feedback ?? (semFocoDefinido ? "Assistindo sem equipe configurada para analise." : "Pronto para marcacao rapida.")}
-          </p>
+          <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Leitura operacional</p>
+          <p className="text-sm text-slate-200">{semFocoDefinido ? "Assistindo sem equipe configurada para analise." : "Selecione zona, evento e avance no fluxo."}</p>
         </div>
       </div>
     </section>
