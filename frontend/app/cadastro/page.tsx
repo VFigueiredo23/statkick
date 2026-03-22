@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/AuthProvider";
 
 export default function CadastroPage() {
-  const router = useRouter();
   const { registrar } = useAuth();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -23,7 +21,6 @@ export default function CadastroPage() {
 
     try {
       await registrar({ nome, email, password, organizacao_nome: organizacaoNome });
-      router.replace("/");
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao criar conta.");
     } finally {

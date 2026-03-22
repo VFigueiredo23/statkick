@@ -38,6 +38,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  if (autenticado && ROTAS_PUBLICAS.has(pathname)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm text-slate-300">
+        Redirecionando...
+      </div>
+    );
+  }
+
   if (!autenticado) {
     return null;
   }

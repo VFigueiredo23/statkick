@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/AuthProvider";
 
 export default function LoginPage() {
-  const router = useRouter();
   const { entrar } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +19,6 @@ export default function LoginPage() {
 
     try {
       await entrar({ email, password });
-      router.replace("/");
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao entrar.");
     } finally {

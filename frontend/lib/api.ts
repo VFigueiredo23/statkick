@@ -422,7 +422,6 @@ export async function efetuarRegistro(payload: RegistroPayload): Promise<AuthPay
   if (dados.organizacao_atual) {
     salvarOrganizacaoId(String(dados.organizacao_atual.id));
   }
-  notificarSessaoAlterada();
   return dados;
 }
 
@@ -442,7 +441,6 @@ export async function efetuarLogin(payload: LoginPayload): Promise<AuthPayload> 
   if (dados.organizacao_atual) {
     salvarOrganizacaoId(String(dados.organizacao_atual.id));
   }
-  notificarSessaoAlterada();
   return dados;
 }
 
@@ -464,5 +462,4 @@ export async function efetuarLogout(): Promise<void> {
   }
 
   limparSessaoLocal();
-  notificarSessaoAlterada();
 }
