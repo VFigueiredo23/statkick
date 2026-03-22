@@ -12,3 +12,16 @@ export function rotuloPapel(papel: string | null | undefined) {
       return papel ?? "-";
   }
 }
+
+export function rotuloPlano(plano: string | null | undefined) {
+  switch (plano) {
+    case "teste":
+      return "Plano de teste";
+    case "profissional":
+      return "Plano profissional";
+    case "empresa":
+      return "Plano empresa";
+    default:
+      return plano ?? "-";
+  }
+}

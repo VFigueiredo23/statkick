@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from equipes.models import Equipe
 from organizacoes.contexto import obter_organizacao_atual
+from organizacoes.limites import garantir_limite_entidade
 from partidas.models import Partida
 
 
@@ -36,7 +37,12 @@ class PartidaSerializer(serializers.ModelSerializer):
         if request is None:
             raise serializers.ValidationError("Request ausente para resolver equipe.")
         organizacao = obter_organizacao_atual(request)
-        equipe, _ = Equipe.objects.get_or_create(
+        equipe = Equipe.objects.filter(organizacao=organizacao, nome=nome.strip()).first()
+        if equipe is not None:
+            return equipe
+
+        garantir_limite_entidade(organizacao, "equipes")
+        equipe = Equipe.objects.create(
             organizacao=organizacao,
             nome=nome.strip(),
         )

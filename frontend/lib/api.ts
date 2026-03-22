@@ -48,12 +48,47 @@ export type OrganizacaoAtualPayload = {
   id: number;
   nome: string;
   slug: string;
+  plano: string;
   status: string;
+  limite_membros: number;
+  limite_equipes: number;
+  limite_jogadores: number;
+  limite_partidas: number;
+  limite_armazenamento_bytes: number;
   criado_em: string;
   papel_atual: string | null;
   pode_gerir: boolean;
   pode_editar_conteudo: boolean;
   total_membros: number;
+  uso: {
+    membros: CapacidadeUsoPayload;
+    convites_pendentes: number;
+    equipes: CapacidadeUsoPayload;
+    jogadores: CapacidadeUsoPayload;
+    partidas: CapacidadeUsoPayload;
+    armazenamento: CapacidadeUsoPayload;
+    onboarding: {
+      total: number;
+      concluidos: number;
+      percentual: number;
+      etapas: OnboardingEtapaPayload[];
+    };
+  };
+};
+
+export type CapacidadeUsoPayload = {
+  utilizado: number;
+  limite: number;
+  restante: number;
+  percentual: number;
+  unidade: string;
+};
+
+export type OnboardingEtapaPayload = {
+  id: string;
+  titulo: string;
+  descricao: string;
+  concluido: boolean;
 };
 
 export type MembroOrganizacaoPayload = {

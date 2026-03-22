@@ -2,6 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from organizacoes.contexto import obter_membro_atual, obter_organizacao_atual
+from organizacoes.limites import calcular_uso_organizacao
 from organizacoes.models import ConviteOrganizacao, MembroOrganizacao, Organizacao
 from usuarios.models import Usuario
 from usuarios.serializers import UsuarioSerializer
@@ -12,6 +13,7 @@ class OrganizacaoDetalheSerializer(serializers.ModelSerializer):
     pode_gerir = serializers.SerializerMethodField()
     pode_editar_conteudo = serializers.SerializerMethodField()
     total_membros = serializers.SerializerMethodField()
+    uso = serializers.SerializerMethodField()
 
     class Meta:
         model = Organizacao
@@ -19,12 +21,19 @@ class OrganizacaoDetalheSerializer(serializers.ModelSerializer):
             "id",
             "nome",
             "slug",
+            "plano",
             "status",
+            "limite_membros",
+            "limite_equipes",
+            "limite_jogadores",
+            "limite_partidas",
+            "limite_armazenamento_bytes",
             "criado_em",
             "papel_atual",
             "pode_gerir",
             "pode_editar_conteudo",
             "total_membros",
+            "uso",
         ]
 
     def get_papel_atual(self, obj: Organizacao):
@@ -46,6 +55,9 @@ class OrganizacaoDetalheSerializer(serializers.ModelSerializer):
 
     def get_total_membros(self, obj: Organizacao):
         return obj.membros.filter(ativo=True).count()
+
+    def get_uso(self, obj: Organizacao):
+        return calcular_uso_organizacao(obj)
 
 
 class OrganizacaoAtualizacaoSerializer(serializers.ModelSerializer):

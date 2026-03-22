@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
-import { rotuloPapel } from "@/lib/papeis";
+import { rotuloPapel, rotuloPlano } from "@/lib/papeis";
 import {
   ConviteOrganizacaoPayload,
   MembroOrganizacaoPayload,
@@ -27,6 +27,30 @@ const OPCOES_PAPEL = [
 function formatarData(valor: string | null) {
   if (!valor) return "-";
   return new Date(valor).toLocaleString("pt-BR");
+}
+
+function formatarBytes(bytes: number) {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${bytes} B`;
+}
+
+function BarraUso({ percentual }: { percentual: number }) {
+  const classe =
+    percentual >= 90 ? "bg-red-400" : percentual >= 75 ? "bg-amber-400" : "bg-accent";
+
+  return (
+    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
+      <div className={`h-full rounded-full ${classe}`} style={{ width: `${Math.min(percentual, 100)}%` }} />
+    </div>
+  );
 }
 
 export default function PaginaOrganizacao() {
@@ -72,6 +96,45 @@ export default function PaginaOrganizacao() {
   const podeGerir = Boolean(organizacao?.pode_gerir);
 
   const membrosAtivos = useMemo(() => membros.filter((item) => item.ativo), [membros]);
+  const cardsUso = organizacao
+    ? [
+        {
+          id: "membros",
+          titulo: "Membros",
+          valor: `${organizacao.uso.membros.utilizado}/${organizacao.uso.membros.limite}`,
+          detalhe: `${organizacao.uso.convites_pendentes} convite(s) pendente(s)`,
+          percentual: organizacao.uso.membros.percentual,
+        },
+        {
+          id: "equipes",
+          titulo: "Equipes",
+          valor: `${organizacao.uso.equipes.utilizado}/${organizacao.uso.equipes.limite}`,
+          detalhe: `${organizacao.uso.equipes.restante} restante(s)`,
+          percentual: organizacao.uso.equipes.percentual,
+        },
+        {
+          id: "jogadores",
+          titulo: "Jogadores",
+          valor: `${organizacao.uso.jogadores.utilizado}/${organizacao.uso.jogadores.limite}`,
+          detalhe: `${organizacao.uso.jogadores.restante} restante(s)`,
+          percentual: organizacao.uso.jogadores.percentual,
+        },
+        {
+          id: "partidas",
+          titulo: "Partidas",
+          valor: `${organizacao.uso.partidas.utilizado}/${organizacao.uso.partidas.limite}`,
+          detalhe: `${organizacao.uso.partidas.restante} restante(s)`,
+          percentual: organizacao.uso.partidas.percentual,
+        },
+        {
+          id: "armazenamento",
+          titulo: "Armazenamento de videos",
+          valor: `${formatarBytes(organizacao.uso.armazenamento.utilizado)} / ${formatarBytes(organizacao.limite_armazenamento_bytes)}`,
+          detalhe: `${formatarBytes(organizacao.uso.armazenamento.restante)} livre`,
+          percentual: organizacao.uso.armazenamento.percentual,
+        },
+      ]
+    : [];
 
   const salvarNome = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
@@ -175,7 +238,7 @@ export default function PaginaOrganizacao() {
         <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Workspace SaaS</p>
         <h1 className="mt-2 text-3xl font-semibold text-white">{organizacao.nome}</h1>
         <p className="mt-2 text-sm text-slate-300">
-          Slug: {organizacao.slug} · Papel atual: {rotuloPapel(organizacao.papel_atual)} · Status: {organizacao.status}
+          {rotuloPlano(organizacao.plano)} · Slug: {organizacao.slug} · Papel atual: {rotuloPapel(organizacao.papel_atual)} · Status: {organizacao.status}
         </p>
         <p className="mt-1 text-sm text-slate-400">
           {organizacao.total_membros} membro(s) ativo(s) · criado em {formatarData(organizacao.criado_em)}
@@ -183,6 +246,46 @@ export default function PaginaOrganizacao() {
 
         {mensagem && <p className="mt-4 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent">{mensagem}</p>}
         {erro && <p className="mt-4 rounded-2xl border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{erro}</p>}
+      </section>
+
+      <section className="mt-6 rounded-[28px] border border-slate-700/70 bg-panel p-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Plano e consumo</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Limites do workspace</h2>
+          </div>
+          <p className="text-sm text-slate-400">
+            Onboarding: {organizacao.uso.onboarding.concluidos}/{organizacao.uso.onboarding.total} etapa(s)
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {cardsUso.map((card) => (
+            <article key={card.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">{card.titulo}</p>
+              <p className="mt-3 text-xl font-semibold text-white">{card.valor}</p>
+              <p className="mt-2 text-sm text-slate-400">{card.detalhe}</p>
+              <BarraUso percentual={card.percentual} />
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+          <p className="text-sm font-semibold text-white">Checklist de ativacao</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {organizacao.uso.onboarding.etapas.map((etapa) => (
+              <div
+                key={etapa.id}
+                className={`rounded-2xl border p-4 ${etapa.concluido ? "border-accent/40 bg-accent/10" : "border-slate-800 bg-slate-950/60"}`}
+              >
+                <p className="text-sm font-semibold text-white">
+                  {etapa.concluido ? "Concluido" : "Pendente"} · {etapa.titulo}
+                </p>
+                <p className="mt-2 text-sm text-slate-300">{etapa.descricao}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">

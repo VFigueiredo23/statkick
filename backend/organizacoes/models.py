@@ -5,6 +5,16 @@ import uuid
 
 
 class Organizacao(models.Model):
+    PLANO_TESTE = "teste"
+    PLANO_PROFISSIONAL = "profissional"
+    PLANO_EMPRESA = "empresa"
+
+    OPCOES_PLANO = [
+        (PLANO_TESTE, "Teste"),
+        (PLANO_PROFISSIONAL, "Profissional"),
+        (PLANO_EMPRESA, "Empresa"),
+    ]
+
     STATUS_TESTE = "teste"
     STATUS_ATIVA = "ativa"
     STATUS_SUSPENSA = "suspensa"
@@ -17,6 +27,12 @@ class Organizacao(models.Model):
 
     nome = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
+    plano = models.CharField(max_length=20, choices=OPCOES_PLANO, default=PLANO_TESTE)
+    limite_membros = models.PositiveIntegerField(default=5)
+    limite_equipes = models.PositiveIntegerField(default=30)
+    limite_jogadores = models.PositiveIntegerField(default=200)
+    limite_partidas = models.PositiveIntegerField(default=50)
+    limite_armazenamento_bytes = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)
     status = models.CharField(max_length=20, choices=OPCOES_STATUS, default=STATUS_TESTE)
     criado_em = models.DateTimeField(auto_now_add=True)
 

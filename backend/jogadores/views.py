@@ -4,6 +4,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from jogadores.models import AvaliacaoJogador, Jogador
 from jogadores.serializers import AvaliacaoJogadorSerializer, JogadorSerializer
 from organizacoes.contexto import obter_organizacao_atual
+from organizacoes.limites import garantir_limite_entidade
 from organizacoes.permissoes import CanAccessScoutingData
 
 
@@ -35,7 +36,9 @@ class JogadorViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(organizacao=obter_organizacao_atual(self.request))
+        organizacao = obter_organizacao_atual(self.request)
+        garantir_limite_entidade(organizacao, "jogadores")
+        serializer.save(organizacao=organizacao)
 
 
 class AvaliacaoJogadorViewSet(viewsets.ModelViewSet):

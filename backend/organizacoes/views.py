@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from organizacoes.contexto import obter_membro_atual, obter_organizacao_atual
+from organizacoes.limites import garantir_limite_membros
 from organizacoes.models import ConviteOrganizacao, MembroOrganizacao
 from organizacoes.permissoes import CanManageOrganization, IsOrganizacaoMembro
 from organizacoes.serializers import (
@@ -91,6 +92,10 @@ class OrganizacaoMembroDetalheView(APIView):
 
         novo_papel = dados.get("papel")
         novo_ativo = dados.get("ativo")
+        if membro_alvo.usuario_id == request.user.id and novo_ativo is False:
+            raise ValidationError("Voce nao pode se desativar da propria organizacao por aqui.")
+        if novo_ativo is True and not membro_alvo.ativo:
+            garantir_limite_membros(organizacao, incremento=1, considerar_convites=False)
         validar_gestao_owner(membro_alvo, membro_executor, novo_papel, novo_ativo)
 
         for campo, valor in dados.items():
@@ -122,6 +127,7 @@ class OrganizacaoConvitesView(APIView):
 
         serializer = ConviteOrganizacaoCriacaoSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
+        garantir_limite_membros(organizacao, incremento=1, considerar_convites=True)
 
         convite = ConviteOrganizacao.objects.create(
             organizacao=organizacao,
@@ -176,6 +182,14 @@ class ConviteAceitarView(APIView):
                 {"detail": "Este convite foi emitido para outro email."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
+        membro_existente = MembroOrganizacao.objects.filter(
+            organizacao=convite.organizacao,
+            usuario=request.user,
+            ativo=True,
+        ).exists()
+        if not membro_existente:
+            garantir_limite_membros(convite.organizacao, incremento=1, considerar_convites=False)
 
         membro, _ = MembroOrganizacao.objects.update_or_create(
             organizacao=convite.organizacao,
