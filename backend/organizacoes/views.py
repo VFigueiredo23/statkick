@@ -23,10 +23,10 @@ from organizacoes.serializers import (
 
 def validar_gestao_owner(membro_alvo: MembroOrganizacao, membro_executor: MembroOrganizacao, novo_papel: str | None, novo_ativo: bool | None):
     if membro_alvo.papel == MembroOrganizacao.PAPEL_OWNER and membro_executor.papel != MembroOrganizacao.PAPEL_OWNER:
-        raise PermissionDenied("Apenas owners podem alterar outro owner.")
+        raise PermissionDenied("Apenas proprietarios podem alterar outro proprietario.")
 
     if novo_papel == MembroOrganizacao.PAPEL_OWNER and membro_executor.papel != MembroOrganizacao.PAPEL_OWNER:
-        raise PermissionDenied("Apenas owners podem promover um membro para owner.")
+        raise PermissionDenied("Apenas proprietarios podem promover um membro para proprietario.")
 
     if membro_alvo.papel == MembroOrganizacao.PAPEL_OWNER:
         removendo_owner = novo_papel not in {None, MembroOrganizacao.PAPEL_OWNER} or novo_ativo is False
@@ -37,7 +37,7 @@ def validar_gestao_owner(membro_alvo: MembroOrganizacao, membro_executor: Membro
                 ativo=True,
             ).count()
             if owners_ativos <= 1:
-                raise ValidationError("A organizacao precisa manter pelo menos um owner ativo.")
+                raise ValidationError("A organizacao precisa manter pelo menos um proprietario ativo.")
 
 
 class OrganizacaoAtualView(APIView):

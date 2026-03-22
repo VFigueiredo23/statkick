@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/AuthProvider";
 import { ConvitePublicoPayload, aceitarConviteOrganizacao, buscarConvitePublico } from "@/lib/api";
+import { rotuloPapel } from "@/lib/papeis";
 import { salvarOrganizacaoId } from "@/lib/auth-storage";
 
 type PaginaConviteProps = {
@@ -90,7 +91,7 @@ export default function PaginaConvite({ params }: PaginaConviteProps) {
         <p className="text-[11px] uppercase tracking-[0.4em] text-slate-400">Convite de organizacao</p>
         <h1 className="mt-3 text-3xl font-semibold text-white">{convite.organizacao.nome}</h1>
         <p className="mt-2 text-sm leading-6 text-slate-300">
-          Este convite foi emitido para <strong>{convite.email}</strong> com papel <strong>{convite.papel}</strong>.
+          Este convite foi emitido para <strong>{convite.email}</strong> com papel <strong>{rotuloPapel(convite.papel)}</strong>.
         </p>
         <p className="mt-2 text-sm text-slate-400">
           Status: {convite.status} · Expira em {formatarData(convite.expira_em)}

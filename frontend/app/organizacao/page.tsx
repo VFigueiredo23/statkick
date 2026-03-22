@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
+import { rotuloPapel } from "@/lib/papeis";
 import {
   ConviteOrganizacaoPayload,
   MembroOrganizacaoPayload,
@@ -17,10 +18,10 @@ import {
 } from "@/lib/api";
 
 const OPCOES_PAPEL = [
-  { value: "owner", label: "Owner" },
-  { value: "admin", label: "Admin" },
+  { value: "owner", label: "Proprietario" },
+  { value: "admin", label: "Administrador" },
   { value: "analista", label: "Analista" },
-  { value: "viewer", label: "Viewer" },
+  { value: "viewer", label: "Visualizador" },
 ];
 
 function formatarData(valor: string | null) {
@@ -174,7 +175,7 @@ export default function PaginaOrganizacao() {
         <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Workspace SaaS</p>
         <h1 className="mt-2 text-3xl font-semibold text-white">{organizacao.nome}</h1>
         <p className="mt-2 text-sm text-slate-300">
-          Slug: {organizacao.slug} · Papel atual: {organizacao.papel_atual ?? "-"} · Status: {organizacao.status}
+          Slug: {organizacao.slug} · Papel atual: {rotuloPapel(organizacao.papel_atual)} · Status: {organizacao.status}
         </p>
         <p className="mt-1 text-sm text-slate-400">
           {organizacao.total_membros} membro(s) ativo(s) · criado em {formatarData(organizacao.criado_em)}
@@ -219,7 +220,7 @@ export default function PaginaOrganizacao() {
                 {salvandoNome ? "Salvando..." : "Salvar organizacao"}
               </button>
             ) : (
-              <p className="text-sm text-slate-400">Somente admins e owners podem alterar os dados da organizacao.</p>
+              <p className="text-sm text-slate-400">Somente administradores e proprietarios podem alterar os dados da organizacao.</p>
             )}
           </form>
         </section>
@@ -310,7 +311,7 @@ export default function PaginaOrganizacao() {
           )}
         </div>
 
-        {!podeGerir && <p className="mt-4 text-sm text-slate-400">Somente admins e owners podem criar convites.</p>}
+        {!podeGerir && <p className="mt-4 text-sm text-slate-400">Somente administradores e proprietarios podem criar convites.</p>}
 
         <div className="mt-6 space-y-3">
           {convites.map((convite) => (
@@ -319,7 +320,7 @@ export default function PaginaOrganizacao() {
                 <div>
                   <p className="text-base font-semibold text-white">{convite.email}</p>
                   <p className="mt-1 text-sm text-slate-400">
-                    Papel: {convite.papel} · Status: {convite.status} · Expira em {formatarData(convite.expira_em)}
+                    Papel: {rotuloPapel(convite.papel)} · Status: {convite.status} · Expira em {formatarData(convite.expira_em)}
                   </p>
                 </div>
 
