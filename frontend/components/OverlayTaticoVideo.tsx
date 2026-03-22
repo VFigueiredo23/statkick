@@ -2,7 +2,7 @@
 
 import { PointerEvent, useEffect, useId, useMemo, useState } from "react";
 
-type FerramentaDesenho = "cursor" | "linha" | "seta" | "retangulo" | "holofote";
+type FerramentaDesenho = "cursor" | "linha" | "seta" | "rota" | "retangulo" | "holofote" | "anel";
 
 type Ponto = {
   x: number;
@@ -29,8 +29,10 @@ const CORES = ["#22c55e", "#f97316", "#38bdf8", "#facc15", "#f8fafc"];
 const ROTULO_FERRAMENTA: Record<Anotacao["ferramenta"], string> = {
   linha: "Linha",
   seta: "Seta",
+  rota: "Rota",
   retangulo: "Box",
   holofote: "Holofote",
+  anel: "Anel",
 };
 
 function limitar(valor: number) {
@@ -95,6 +97,18 @@ function RenderizarAnotacao({
     );
   }
 
+  if (anotacao.ferramenta === "anel") {
+    const raio = calcularRaio(anotacao);
+
+    return (
+      <g onPointerDown={aoSelecionar} className={emCursor ? "cursor-move" : undefined}>
+        <circle cx={anotacao.inicio.x} cy={anotacao.inicio.y} r={raio} fill={`${anotacao.cor}0f`} stroke={anotacao.cor} strokeWidth={strokeWidth} strokeDasharray="3 1.4" />
+        <circle cx={anotacao.inicio.x} cy={anotacao.inicio.y} r={raio + 2.2} fill="transparent" stroke={`${anotacao.cor}55`} strokeWidth="0.45" />
+        <circle cx={anotacao.inicio.x} cy={anotacao.inicio.y} r={raio + 5.4} fill="transparent" stroke="transparent" strokeWidth="8" />
+      </g>
+    );
+  }
+
   return (
     <g onPointerDown={aoSelecionar} className={emCursor ? "cursor-move" : undefined}>
       <line
@@ -105,8 +119,8 @@ function RenderizarAnotacao({
         stroke={anotacao.cor}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
-        strokeDasharray={strokeDasharray}
-        markerEnd={anotacao.ferramenta === "seta" ? `url(#${markerId})` : undefined}
+        strokeDasharray={anotacao.ferramenta === "rota" ? "2.4 1.5" : strokeDasharray}
+        markerEnd={anotacao.ferramenta === "seta" || anotacao.ferramenta === "rota" ? `url(#${markerId})` : undefined}
       />
       <line
         x1={anotacao.inicio.x}
@@ -231,8 +245,10 @@ export default function OverlayTaticoVideo({ resetKey }: { resetKey: string }) {
         <span className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Quadro tatico</span>
         {[
           { id: "cursor", label: "Cursor" },
+          { id: "anel", label: "Anel" },
           { id: "linha", label: "Linha" },
           { id: "seta", label: "Seta" },
+          { id: "rota", label: "Rota" },
           { id: "retangulo", label: "Box" },
           { id: "holofote", label: "Holofote" },
         ].map((item) => (

@@ -53,6 +53,14 @@ function formatarPosicao(valor: number) {
   return `${Math.round(valor)}%`;
 }
 
+function corHeatmap(intensidade: number) {
+  if (intensidade >= 0.85) return "rgba(239, 68, 68, 0.72)";
+  if (intensidade >= 0.65) return "rgba(249, 115, 22, 0.62)";
+  if (intensidade >= 0.45) return "rgba(250, 204, 21, 0.52)";
+  if (intensidade >= 0.25) return "rgba(34, 197, 94, 0.42)";
+  return "rgba(59, 130, 246, 0.32)";
+}
+
 export default function PainelAnaliseEspacial({
   equipes,
   jogadores,
@@ -94,6 +102,37 @@ export default function PainelAnaliseEspacial({
   const opcoesTipoEvento = useMemo(() => {
     return Array.from(new Set(eventosComPosicao.map((evento) => evento.tipo_evento))).sort();
   }, [eventosComPosicao]);
+
+  const zonasHeatmap = useMemo(() => {
+    const colunas = 12;
+    const linhas = 8;
+    const grade = Array.from({ length: colunas * linhas }, (_, indice) => ({
+      indice,
+      x: indice % colunas,
+      y: Math.floor(indice / colunas),
+      contagem: 0,
+    }));
+
+    eventosFiltrados.forEach((evento) => {
+      const coluna = Math.min(colunas - 1, Math.max(0, Math.floor(((evento.posicao_x ?? 0) / 100) * colunas)));
+      const linha = Math.min(linhas - 1, Math.max(0, Math.floor(((evento.posicao_y ?? 0) / 100) * linhas)));
+      grade[linha * colunas + coluna].contagem += 1;
+    });
+
+    const maiorContagem = Math.max(...grade.map((item) => item.contagem), 0);
+    if (!maiorContagem) return [];
+
+    return grade
+      .filter((item) => item.contagem > 0)
+      .map((item) => ({
+        ...item,
+        intensidade: item.contagem / maiorContagem,
+        left: (item.x / colunas) * 100,
+        top: (item.y / linhas) * 100,
+        width: 100 / colunas,
+        height: 100 / linhas,
+      }));
+  }, [eventosFiltrados]);
 
   const resumoFoco = jogadorAtivo
     ? `Heatmap de ${jogadorAtivo.nome}`
@@ -201,14 +240,26 @@ export default function PainelAnaliseEspacial({
 
           <div className="mt-4">
             <CampoFutebol>
+              {zonasHeatmap.map((zona) => (
+                <div key={`zona-${zona.indice}`}>
+                  <div
+                    className="absolute blur-xl"
+                    style={{
+                      left: `${zona.left}%`,
+                      top: `${zona.top}%`,
+                      width: `${zona.width}%`,
+                      height: `${zona.height}%`,
+                      backgroundColor: corHeatmap(zona.intensidade),
+                      opacity: 0.95,
+                    }}
+                  />
+                </div>
+              ))}
+
               {eventosFiltrados.map((evento) => (
                 <div key={evento.id}>
                   <div
-                    className="absolute h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-300/14 blur-2xl"
-                    style={{ left: `${evento.posicao_x}%`, top: `${evento.posicao_y}%` }}
-                  />
-                  <div
-                    className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30 bg-emerald-300/50"
+                    className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/35 bg-white/70"
                     style={{ left: `${evento.posicao_x}%`, top: `${evento.posicao_y}%` }}
                   />
                 </div>
@@ -234,6 +285,23 @@ export default function PainelAnaliseEspacial({
             <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
               <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Pontos</p>
               <p className="mt-2 text-sm font-medium text-white">{eventosFiltrados.length} zona(s) mapeada(s)</p>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+              <span className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Legenda</span>
+              {[
+                { cor: "rgba(59, 130, 246, 0.7)", rotulo: "Baixa" },
+                { cor: "rgba(34, 197, 94, 0.7)", rotulo: "Media" },
+                { cor: "rgba(249, 115, 22, 0.7)", rotulo: "Alta" },
+                { cor: "rgba(239, 68, 68, 0.75)", rotulo: "Pico" },
+              ].map((item) => (
+                <span key={item.rotulo} className="inline-flex items-center gap-2">
+                  <span className="h-3 w-8 rounded-full" style={{ backgroundColor: item.cor }} />
+                  {item.rotulo}
+                </span>
+              ))}
             </div>
           </div>
         </article>
