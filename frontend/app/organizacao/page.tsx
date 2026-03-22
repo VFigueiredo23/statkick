@@ -67,6 +67,7 @@ export default function PaginaOrganizacao() {
   const [carregando, setCarregando] = useState(true);
   const [salvandoNome, setSalvandoNome] = useState(false);
   const [salvandoConvite, setSalvandoConvite] = useState(false);
+  const [mostrarAuditoria, setMostrarAuditoria] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -244,40 +245,66 @@ export default function PaginaOrganizacao() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       <section className="rounded-[28px] border border-slate-700/70 bg-panel p-6">
-        <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Workspace SaaS</p>
-        <h1 className="mt-2 text-3xl font-semibold text-white">{organizacao.nome}</h1>
-        <p className="mt-2 text-sm text-slate-300">
-          {rotuloPlano(organizacao.plano)} · Slug: {organizacao.slug} · Papel atual: {rotuloPapel(organizacao.papel_atual)} · Status: {organizacao.status}
-        </p>
-        <p className="mt-1 text-sm text-slate-400">
-          {organizacao.total_membros} membro(s) ativo(s) · criado em {formatarData(organizacao.criado_em)}
-        </p>
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Workspace SaaS</p>
+            <h1 className="mt-2 text-3xl font-semibold text-white">{organizacao.nome}</h1>
+            <p className="mt-2 text-sm text-slate-300">
+              {rotuloPlano(organizacao.plano)} · Slug: {organizacao.slug} · Papel atual: {rotuloPapel(organizacao.papel_atual)} · Status: {organizacao.status}
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              {organizacao.total_membros} membro(s) ativo(s) · criado em {formatarData(organizacao.criado_em)}
+            </p>
+          </div>
+
+          <aside className="w-full rounded-2xl border border-slate-800 bg-slate-950/50 p-4 xl:max-w-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Atividade</p>
+                <p className="mt-2 text-sm font-semibold text-white">Historico recente</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {auditoria.length ? `${auditoria.length} registro(s) recente(s)` : "Nenhuma atividade registrada ainda."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarAuditoria((atual) => !atual)}
+                className="rounded-full border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200"
+              >
+                {mostrarAuditoria ? "Ocultar" : "Ver"}
+              </button>
+            </div>
+
+            {!mostrarAuditoria && auditoria[0] && (
+              <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
+                <p className="text-sm font-medium text-white">{auditoria[0].descricao || auditoria[0].acao}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {auditoria[0].usuario?.nome ?? "Sistema"} · {formatarData(auditoria[0].criado_em)}
+                </p>
+              </div>
+            )}
+
+            {mostrarAuditoria && (
+              <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
+                {auditoria.map((item) => (
+                  <article key={item.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm font-medium text-white">{item.descricao || item.acao}</p>
+                      <p className="text-xs text-slate-400">
+                        {item.usuario?.nome ?? "Sistema"} · {formatarData(item.criado_em)}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+
+                {!auditoria.length && <p className="text-sm text-slate-400">Nenhuma atividade registrada ainda.</p>}
+              </div>
+            )}
+          </aside>
+        </div>
 
         {mensagem && <p className="mt-4 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent">{mensagem}</p>}
         {erro && <p className="mt-4 rounded-2xl border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{erro}</p>}
-      </section>
-
-      <section className="mt-6 rounded-[28px] border border-slate-700/70 bg-panel p-6">
-        <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Atividade</p>
-        <h2 className="mt-2 text-2xl font-semibold text-white">Historico recente do workspace</h2>
-
-        <div className="mt-6 space-y-3">
-          {auditoria.map((item) => (
-            <article key={item.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-white">{item.descricao || item.acao}</p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {item.usuario?.nome ?? "Sistema"} · {formatarData(item.criado_em)}
-                  </p>
-                </div>
-                <div className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">{item.acao}</div>
-              </div>
-            </article>
-          ))}
-
-          {!auditoria.length && <p className="text-sm text-slate-400">Nenhuma atividade registrada ainda.</p>}
-        </div>
       </section>
 
       <section className="mt-6 rounded-[28px] border border-slate-700/70 bg-panel p-6">
