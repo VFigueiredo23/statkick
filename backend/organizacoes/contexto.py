@@ -44,3 +44,21 @@ def obter_organizacao_atual(request) -> Organizacao:
     if membro is None:
         raise NotFound("Usuario sem organizacao ativa.")
     return membro.organizacao
+
+
+def garantir_membro_na_organizacao_default(usuario):
+    if usuario is None or not getattr(usuario, "is_authenticated", False):
+        return None
+
+    membro = MembroOrganizacao.objects.filter(usuario=usuario, ativo=True).select_related("organizacao").order_by("id").first()
+    if membro is not None:
+        return membro
+
+    organizacao = obter_organizacao_padrao()
+    papel = MembroOrganizacao.PAPEL_OWNER if getattr(usuario, "is_superuser", False) else MembroOrganizacao.PAPEL_ADMIN
+    membro, _ = MembroOrganizacao.objects.get_or_create(
+        usuario=usuario,
+        organizacao=organizacao,
+        defaults={"papel": papel, "ativo": True},
+    )
+    return membro

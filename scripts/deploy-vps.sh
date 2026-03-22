@@ -85,7 +85,7 @@ if command -v curl >/dev/null 2>&1; then
 
   retry_http_check "frontend interno" curl -fsS http://127.0.0.1:3000/
 
-  retry_http_check "backend interno" curl -fsS http://127.0.0.1:8000/partidas
+  retry_http_check "backend interno" curl -fsS http://127.0.0.1:8000/health
 
   if [[ "$DEPLOY_TARGET_MODE" == "domain" && -n "${APP_DOMAIN:-}" ]]; then
     retry_http_check "proxy do frontend" \
@@ -98,7 +98,7 @@ if command -v curl >/dev/null 2>&1; then
     retry_http_check "proxy da API" \
       curl --fail --silent --show-error \
       --resolve "${API_DOMAIN}:443:127.0.0.1" \
-      "https://${API_DOMAIN}/partidas"
+      "https://${API_DOMAIN}/health"
   fi
 else
   log "curl nao encontrado; pulando smoke tests HTTP"
