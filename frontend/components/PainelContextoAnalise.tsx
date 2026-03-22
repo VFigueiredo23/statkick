@@ -61,8 +61,8 @@ export default function PainelContextoAnalise({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Centro de Controle</p>
-          <h2 className="mt-2 text-xl font-semibold text-white">Foco da analise</h2>
-          <p className="mt-1 text-sm text-slate-400">Defina quem esta no radar antes de marcar o lance.</p>
+          <h2 className="mt-2 text-xl font-semibold text-white">Zona atual da jogada</h2>
+          <p className="mt-1 text-sm text-slate-400">Clique no campo, abra a zona e dispare a acao do lance sem sair do fluxo.</p>
         </div>
         <button
           type="button"
@@ -73,22 +73,79 @@ export default function PainelContextoAnalise({
         </button>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div>
+      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/35 p-3">
+        <button
+          type="button"
+          disabled={!zonaAtual}
+          onClick={() => {
+            if (!zonaAtual) return;
+            setZonaExpandida((atual) => !atual);
+          }}
+          className={`w-full rounded-2xl border px-4 py-4 text-left ${
+            zonaAtual
+              ? "border-accent/40 bg-accent/10"
+              : "border-slate-800 bg-slate-950/35"
+          } ${!zonaAtual ? "cursor-default" : ""}`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Zona selecionada</p>
+              <p className="mt-2 text-base font-semibold text-white">{zonaRotulo}</p>
+              <p className="mt-1 text-sm text-slate-400">
+                {zonaAtual
+                  ? "Clique neste bloco para abrir as acoes rapidas da jogada."
+                  : "Primeiro clique no campo da analise espacial para definir a zona."}
+              </p>
+            </div>
+            {zonaAtual && (
+              <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-accent">
+                {zonaExpandida ? "Fechar" : "Abrir"}
+              </span>
+            )}
+          </div>
+        </button>
+
+        {zonaExpandida && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {ACOES_ZONA.map((acao) => (
+              <button
+                key={acao}
+                type="button"
+                disabled={!zonaAtual || !podeEditarConteudo || semFocoDefinido || salvandoEvento}
+                onClick={() => aoMarcarEventoNaZona(acao)}
+                className="rounded-xl border border-slate-700 bg-slate-950/55 px-3 py-2 text-left text-sm font-medium text-slate-200 transition hover:border-accent hover:bg-accent/10 hover:text-white disabled:opacity-45"
+              >
+                {acao}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/45 px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Escopo</p>
             <p className="mt-2 text-sm font-medium text-white">{equipesAnalisadas.length ? `${equipesAnalisadas.length} equipe(s)` : "Sem escopo"}</p>
           </div>
-          <div>
+          <div className="rounded-xl border border-slate-800 bg-slate-950/45 px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Alvo</p>
             <p className="mt-2 text-sm font-medium text-white">{jogadorAtivo ? jogadorAtivo.nome : equipeAtiva?.nome ?? "Sem foco"}</p>
           </div>
-          <div>
+          <div className="rounded-xl border border-slate-800 bg-slate-950/45 px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Status</p>
             <p className="mt-2 text-sm font-medium text-white">
               {salvandoEvento ? "Salvando evento..." : feedback ?? (semFocoDefinido ? "Modo observacao" : "Pronto para marcar")}
             </p>
           </div>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/45 px-3 py-2">
+          <p className="text-sm text-slate-300">
+            {semFocoDefinido
+              ? "Defina equipe ou jogador antes de usar a zona como atalho de marcacao."
+              : zonaAtual
+                ? feedback ?? "Zona pronta para disparo rapido do evento."
+                : "Marque uma zona no campo para abrir o seletor rapido."}
+          </p>
         </div>
       </div>
 
@@ -164,65 +221,6 @@ export default function PainelContextoAnalise({
               {jogador.nome}
             </button>
           ))}
-        </div>
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/35 p-3">
-        <button
-          type="button"
-          disabled={!zonaAtual}
-          onClick={() => {
-            if (!zonaAtual) return;
-            setZonaExpandida((atual) => !atual);
-          }}
-          className={`w-full rounded-2xl border px-4 py-4 text-left ${
-            zonaAtual
-              ? "border-accent/40 bg-accent/10"
-              : "border-slate-800 bg-slate-950/35"
-          } ${!zonaAtual ? "cursor-default" : ""}`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Zona atual da jogada</p>
-              <p className="mt-2 text-base font-semibold text-white">{zonaRotulo}</p>
-              <p className="mt-1 text-sm text-slate-400">
-                {zonaAtual
-                  ? "Clique nesta zona para abrir as acoes rapidas do lance."
-                  : "Primeiro clique no campo da analise espacial para definir a zona."}
-              </p>
-            </div>
-            {zonaAtual && (
-              <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-accent">
-                {zonaExpandida ? "Fechar" : "Abrir"}
-              </span>
-            )}
-          </div>
-        </button>
-
-        {zonaExpandida && (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {ACOES_ZONA.map((acao) => (
-              <button
-                key={acao}
-                type="button"
-                disabled={!zonaAtual || !podeEditarConteudo || semFocoDefinido || salvandoEvento}
-                onClick={() => aoMarcarEventoNaZona(acao)}
-                className="rounded-xl border border-slate-700 bg-slate-950/55 px-3 py-2 text-left text-sm font-medium text-slate-200 transition hover:border-accent hover:bg-accent/10 hover:text-white disabled:opacity-45"
-              >
-                {acao}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/45 px-3 py-2">
-          <p className="text-sm text-slate-300">
-            {semFocoDefinido
-              ? "Defina equipe ou jogador antes de usar a zona como atalho de marcacao."
-              : zonaAtual
-                ? feedback ?? "Zona pronta para disparo rapido do evento."
-                : "Marque uma zona no campo para abrir o seletor rapido."}
-          </p>
         </div>
       </div>
     </section>
