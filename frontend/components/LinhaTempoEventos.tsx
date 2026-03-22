@@ -20,6 +20,7 @@ export default function LinhaTempoEventos({ eventos }: LinhaTempoEventosProps) {
               <th className="pb-2">Jogador</th>
               <th className="pb-2">Evento</th>
               <th className="pb-2">Equipe</th>
+              <th className="pb-2">Mapa</th>
             </tr>
           </thead>
           <tbody>
@@ -29,11 +30,21 @@ export default function LinhaTempoEventos({ eventos }: LinhaTempoEventosProps) {
                 <td className="py-2">{evento.jogador_nome || "-"}</td>
                 <td className="py-2">{evento.tipo_evento}</td>
                 <td className="py-2">{evento.equipe_nome || "-"}</td>
+                <td className="py-2">
+                  {evento.posicao_x !== null && evento.posicao_x !== undefined && evento.posicao_y !== null && evento.posicao_y !== undefined ? (
+                    <span className="inline-flex items-center gap-2 text-emerald-300">
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                      Zoneado
+                    </span>
+                  ) : (
+                    <span className="text-slate-500">-</span>
+                  )}
+                </td>
               </tr>
             ))}
             {!eventos.length && (
               <tr>
-                <td className="py-3 text-slate-400" colSpan={4}>
+                <td className="py-3 text-slate-400" colSpan={5}>
                   Nenhum evento marcado ainda.
                 </td>
               </tr>

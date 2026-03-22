@@ -7,6 +7,7 @@ import BarraEventos from "@/components/BarraEventos";
 import CabecalhoAnalise from "@/components/CabecalhoAnalise";
 import LinhaTempoEventos from "@/components/LinhaTempoEventos";
 import ModalConfiguracaoAnalise, { ConfiguracaoEquipeAnalise } from "@/components/ModalConfiguracaoAnalise";
+import PainelAnaliseEspacial from "@/components/PainelAnaliseEspacial";
 import PainelContextoAnalise from "@/components/PainelContextoAnalise";
 import ReprodutorVideo from "@/components/ReprodutorVideo";
 import {
@@ -52,6 +53,7 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
   const [modalConfiguracaoAberto, setModalConfiguracaoAberto] = useState(false);
   const [equipeAtivaId, setEquipeAtivaId] = useState<number | null>(null);
   const [jogadorAtivoId, setJogadorAtivoId] = useState<number | null>(null);
+  const [posicaoSelecionada, setPosicaoSelecionada] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!partidaId || !organizacaoAtual) return;
@@ -175,8 +177,8 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
         tipo_evento: tipoEvento,
         minuto,
         segundo,
-        posicao_x: null,
-        posicao_y: null,
+        posicao_x: posicaoSelecionada?.x ?? null,
+        posicao_y: posicaoSelecionada?.y ?? null,
         observacoes: ""
       });
 
@@ -192,7 +194,9 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
         }
       ]);
 
-      setFeedbackEvento(`${tipoEvento} marcado para ${nomeJogador ?? nomeEquipe ?? "equipe"}.`);
+      setFeedbackEvento(
+        `${tipoEvento} marcado para ${nomeJogador ?? nomeEquipe ?? "equipe"}${posicaoSelecionada ? " com zona de campo." : "."}`
+      );
     } catch (erroSalvar) {
       setErroOperacao(erroSalvar instanceof Error ? erroSalvar.message : "Erro ao salvar evento");
     } finally {
@@ -244,6 +248,17 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
         <BarraEventos aoSelecionarEvento={marcarEventoRapido} desabilitado={!podeEditarConteudo} />
         <ReprodutorVideo url={partida.url_video} aoAtualizarTempo={setSegundosVideo} />
       </div>
+
+      <PainelAnaliseEspacial
+        equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
+        jogadores={jogadoresDaPartida}
+        eventos={eventos}
+        equipeAtivaId={equipeAtivaId}
+        jogadorAtivoId={jogadorAtivoId}
+        posicaoSelecionada={posicaoSelecionada}
+        aoSelecionarPosicao={setPosicaoSelecionada}
+        aoLimparPosicao={() => setPosicaoSelecionada(null)}
+      />
 
       <LinhaTempoEventos eventos={eventos} />
 

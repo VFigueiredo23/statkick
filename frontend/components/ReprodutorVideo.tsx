@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import OverlayTaticoVideo from "@/components/OverlayTaticoVideo";
+
 type ReprodutorVideoProps = {
   url: string;
   aoAtualizarTempo: (segundos: number) => void;
@@ -290,27 +292,28 @@ export default function ReprodutorVideo({ url, aoAtualizarTempo }: ReprodutorVid
 
   return (
     <section className="rounded-xl border border-slate-700 bg-panel p-4">
-      {ehYoutube ? (
-        <div className="mb-4 aspect-video overflow-hidden rounded-lg bg-black">
-          <div ref={referenciaYoutube} className="h-full w-full" />
-        </div>
-      ) : (
-        <video
-          ref={referenciaVideo}
-          className="mb-4 h-auto w-full rounded-lg bg-black"
-          src={url}
-          controls={false}
-          onLoadedMetadata={(evento) => setDuracao(evento.currentTarget.duration || 0)}
-          onTimeUpdate={(evento) => {
-            const proximo = evento.currentTarget.currentTime;
-            setTempoAtual(proximo);
-            aoAtualizarTempo(proximo);
-          }}
-          onError={() => setErro("Nao foi possivel carregar o video. Use um arquivo direto (.mp4, .webm) ou um link do YouTube valido.")}
-          onPause={() => setEstaTocando(false)}
-          onPlay={() => setEstaTocando(true)}
-        />
-      )}
+      <div className="relative mb-4 aspect-video overflow-hidden rounded-lg bg-black">
+        {ehYoutube ? (
+          <div ref={referenciaYoutube} className="absolute inset-0 h-full w-full" />
+        ) : (
+          <video
+            ref={referenciaVideo}
+            className="absolute inset-0 h-full w-full bg-black object-contain"
+            src={url}
+            controls={false}
+            onLoadedMetadata={(evento) => setDuracao(evento.currentTarget.duration || 0)}
+            onTimeUpdate={(evento) => {
+              const proximo = evento.currentTarget.currentTime;
+              setTempoAtual(proximo);
+              aoAtualizarTempo(proximo);
+            }}
+            onError={() => setErro("Nao foi possivel carregar o video. Use um arquivo direto (.mp4, .webm) ou um link do YouTube valido.")}
+            onPause={() => setEstaTocando(false)}
+            onPlay={() => setEstaTocando(true)}
+          />
+        )}
+        <OverlayTaticoVideo resetKey={url} />
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-center gap-2">
