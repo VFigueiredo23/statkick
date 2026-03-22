@@ -144,6 +144,8 @@ class AuditLog(models.Model):
     ACAO_JOGADOR_CRIADO = "jogador.criado"
     ACAO_AVALIACAO_CRIADA = "avaliacao.criada"
     ACAO_PARTIDA_CRIADA = "partida.criada"
+    ACAO_PARTIDA_ATUALIZADA = "partida.atualizada"
+    ACAO_PARTIDA_EXCLUIDA = "partida.excluida"
     ACAO_EVENTO_CRIADO = "evento.criado"
     ACAO_LIMITE_BLOQUEADO = "limite.bloqueado"
 

@@ -494,6 +494,52 @@ export async function criarPartida(payload: PayloadPartida): Promise<Partida> {
   return normalizarUrlVideo(await resposta.json());
 }
 
+export async function atualizarPartida(partidaId: number, payload: PayloadPartida): Promise<Partida> {
+  const temArquivo = payload.tipo_video === "upload" && payload.arquivo_video;
+
+  let resposta: Response;
+  if (temArquivo) {
+    const formData = new FormData();
+    formData.append("equipe_casa_nome_input", payload.equipe_casa_nome_input);
+    formData.append("equipe_fora_nome_input", payload.equipe_fora_nome_input);
+    formData.append("competicao", payload.competicao);
+    formData.append("tipo_video", payload.tipo_video);
+    formData.append("arquivo_video", payload.arquivo_video as File);
+    resposta = await apiFetch(`/partidas/${partidaId}`, {
+      method: "PATCH",
+      body: formData,
+    });
+  } else {
+    resposta = await apiFetch(`/partidas/${partidaId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        equipe_casa_nome_input: payload.equipe_casa_nome_input,
+        equipe_fora_nome_input: payload.equipe_fora_nome_input,
+        competicao: payload.competicao,
+        tipo_video: payload.tipo_video,
+        url_video: payload.tipo_video === "link" ? payload.url_video : "",
+      }),
+    });
+  }
+
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao atualizar partida"));
+  }
+
+  return normalizarUrlVideo(await resposta.json());
+}
+
+export async function excluirPartida(partidaId: number): Promise<void> {
+  const resposta = await apiFetch(`/partidas/${partidaId}`, {
+    method: "DELETE",
+  });
+
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao excluir partida"));
+  }
+}
+
 export async function efetuarRegistro(payload: RegistroPayload): Promise<AuthPayload> {
   const resposta = await fetch(`${URL_API}/auth/register`, {
     method: "POST",

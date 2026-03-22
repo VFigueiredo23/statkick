@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
-import { Partida, criarPartida, listarPartidas } from "@/lib/api";
+import { Partida, atualizarPartida, criarPartida, excluirPartida, listarPartidas } from "@/lib/api";
 
 function formatarData(valor: string): string {
   return new Date(valor).toLocaleString("pt-BR");
@@ -16,6 +16,8 @@ export default function PaginaPartidas() {
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [partidaEmEdicao, setPartidaEmEdicao] = useState<Partida | null>(null);
+  const [partidaProcessandoId, setPartidaProcessandoId] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   const [equipeCasa, setEquipeCasa] = useState("");
@@ -29,9 +31,9 @@ export default function PaginaPartidas() {
     if (!equipeCasa.trim() || !equipeFora.trim() || !competicao.trim()) return false;
     if (equipeCasa.trim().toLowerCase() === equipeFora.trim().toLowerCase()) return false;
     if (tipoVideo === "link" && !urlVideo) return false;
-    if (tipoVideo === "upload" && !arquivoVideo) return false;
+    if (tipoVideo === "upload" && !arquivoVideo && !(partidaEmEdicao && partidaEmEdicao.tipo_video === "upload")) return false;
     return true;
-  }, [arquivoVideo, competicao, equipeCasa, equipeFora, tipoVideo, urlVideo]);
+  }, [arquivoVideo, competicao, equipeCasa, equipeFora, partidaEmEdicao, tipoVideo, urlVideo]);
 
   const carregarDados = async () => {
     try {
@@ -61,26 +63,80 @@ export default function PaginaPartidas() {
     try {
       setSalvando(true);
       setErro(null);
-      const criada = await criarPartida({
+      const payload = {
         equipe_casa_nome_input: equipeCasa.trim(),
         equipe_fora_nome_input: equipeFora.trim(),
         competicao,
         tipo_video: tipoVideo,
         url_video: tipoVideo === "link" ? urlVideo : undefined,
         arquivo_video: tipoVideo === "upload" ? arquivoVideo ?? undefined : undefined
-      });
+      };
 
-      setPartidas((atual) => [criada, ...atual]);
+      if (partidaEmEdicao) {
+        const atualizada = await atualizarPartida(partidaEmEdicao.id, payload);
+        setPartidas((atual) => atual.map((item) => (item.id === atualizada.id ? atualizada : item)));
+      } else {
+        const criada = await criarPartida(payload);
+        setPartidas((atual) => [criada, ...atual]);
+      }
       setEquipeCasa("");
       setEquipeFora("");
       setCompeticao("");
       setTipoVideo("link");
       setUrlVideo("");
       setArquivoVideo(null);
+      setPartidaEmEdicao(null);
     } catch (erroSalvar) {
-      setErro(erroSalvar instanceof Error ? erroSalvar.message : "Erro ao criar partida");
+      setErro(erroSalvar instanceof Error ? erroSalvar.message : `Erro ao ${partidaEmEdicao ? "atualizar" : "criar"} partida`);
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const iniciarEdicao = (partida: Partida) => {
+    setPartidaEmEdicao(partida);
+    setEquipeCasa(partida.equipe_casa_nome || "");
+    setEquipeFora(partida.equipe_fora_nome || "");
+    setCompeticao(partida.competicao);
+    setTipoVideo(partida.tipo_video);
+    setUrlVideo(partida.tipo_video === "link" ? partida.url_video : "");
+    setArquivoVideo(null);
+    setErro(null);
+    window.location.hash = "cadastro-partida";
+  };
+
+  const cancelarEdicao = () => {
+    setPartidaEmEdicao(null);
+    setEquipeCasa("");
+    setEquipeFora("");
+    setCompeticao("");
+    setTipoVideo("link");
+    setUrlVideo("");
+    setArquivoVideo(null);
+    setErro(null);
+  };
+
+  const removerPartida = async (partida: Partida) => {
+    if (!podeEditarConteudo) {
+      setErro("Seu papel atual nao permite excluir partidas.");
+      return;
+    }
+    if (!window.confirm(`Excluir a partida ${partida.equipe_casa_nome} x ${partida.equipe_fora_nome}?`)) {
+      return;
+    }
+
+    try {
+      setPartidaProcessandoId(partida.id);
+      setErro(null);
+      await excluirPartida(partida.id);
+      setPartidas((atual) => atual.filter((item) => item.id !== partida.id));
+      if (partidaEmEdicao?.id === partida.id) {
+        cancelarEdicao();
+      }
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Erro ao excluir partida.");
+    } finally {
+      setPartidaProcessandoId(null);
     }
   };
 
@@ -89,7 +145,18 @@ export default function PaginaPartidas() {
       <h1 className="mb-6 text-2xl font-bold text-white">Partidas</h1>
 
       <section id="cadastro-partida" className="mb-8 rounded-xl border border-slate-700 bg-panel p-4">
-        <h2 className="mb-4 text-lg font-semibold text-white">Cadastrar partida</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-white">{partidaEmEdicao ? "Configurar partida" : "Cadastrar partida"}</h2>
+          {partidaEmEdicao && (
+            <button
+              type="button"
+              onClick={cancelarEdicao}
+              className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-200"
+            >
+              Cancelar edicao
+            </button>
+          )}
+        </div>
         {!podeEditarConteudo && <p className="mb-4 text-sm text-slate-400">Seu papel atual permite apenas visualizacao.</p>}
 
         <form className="grid grid-cols-1 gap-3 md:grid-cols-2" onSubmit={submit}>
@@ -154,6 +221,9 @@ export default function PaginaPartidas() {
                 accept="video/*"
                 onChange={(evento) => setArquivoVideo(evento.target.files?.[0] ?? null)}
               />
+              {partidaEmEdicao?.tipo_video === "upload" && !arquivoVideo && (
+                <span className="mt-1 block text-xs text-slate-500">Envie um novo arquivo apenas se quiser substituir o video atual.</span>
+              )}
             </label>
           )}
 
@@ -163,7 +233,7 @@ export default function PaginaPartidas() {
               disabled={!podeEnviar || salvando || !podeEditarConteudo}
               className="rounded bg-accent px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {salvando ? "Salvando..." : "Salvar partida"}
+              {salvando ? "Salvando..." : partidaEmEdicao ? "Salvar configuracoes" : "Salvar partida"}
             </button>
           </div>
         </form>
@@ -183,9 +253,30 @@ export default function PaginaPartidas() {
               </p>
               <p className="text-sm text-slate-300">{partida.competicao}</p>
               <p className="text-sm text-slate-400">{formatarData(partida.data)}</p>
-              <Link className="mt-3 inline-block rounded bg-accent px-3 py-2 text-sm font-semibold text-black" href={`/analise/${partida.id}`}>
-                Analisar
-              </Link>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link className="inline-block rounded bg-accent px-3 py-2 text-sm font-semibold text-black" href={`/analise/${partida.id}`}>
+                  Analisar
+                </Link>
+                {podeEditarConteudo && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => iniciarEdicao(partida)}
+                      className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-200"
+                    >
+                      Configurar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removerPartida(partida)}
+                      disabled={partidaProcessandoId === partida.id}
+                      className="rounded border border-red-500/40 px-3 py-2 text-sm text-red-200 disabled:opacity-60"
+                    >
+                      {partidaProcessandoId === partida.id ? "Excluindo..." : "Excluir"}
+                    </button>
+                  </>
+                )}
+              </div>
             </article>
           ))}
 

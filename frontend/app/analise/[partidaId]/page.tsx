@@ -16,6 +16,7 @@ import {
   Jogador,
   Partida,
   buscarPartida,
+  criarJogador,
   criarEvento,
   listarEquipes,
   listarEventosDaPartida,
@@ -204,6 +205,39 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
     }
   };
 
+  const cadastrarJogadorRapido = async ({
+    equipeId,
+    nome,
+    posicao,
+    idade
+  }: {
+    equipeId: number;
+    nome: string;
+    posicao: string;
+    idade: number;
+  }) => {
+    if (!partida) {
+      throw new Error("Partida ainda nao carregada para cadastro rapido.");
+    }
+
+    const jogador = await criarJogador({
+      nome,
+      posicao,
+      equipe: equipeId,
+      idade,
+      independente: false,
+      categoria_organizacao: "observacao-partida",
+      informacoes_analista: `Cadastro rapido criado dentro da analise da partida ${partida.id}.`
+    });
+
+    setJogadores((atual) => {
+      const proximo = [jogador, ...atual];
+      return proximo;
+    });
+    setFeedbackEvento(`Atleta ${jogador.nome} cadastrado para a analise.`);
+    return jogador.id;
+  };
+
   if (erroCarregamento) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-8">
@@ -267,6 +301,8 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
         equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
         jogadores={jogadoresDaPartida}
         configuracoes={configuracoesAnalise}
+        podeEditarConteudo={podeEditarConteudo}
+        aoCadastrarJogadorRapido={cadastrarJogadorRapido}
         aoCancelar={() => setModalConfiguracaoAberto(false)}
         aoPularAnalise={() => {
           setConfiguracoesAnalise(
