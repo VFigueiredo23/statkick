@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from django.core.exceptions import ImproperlyConfigured
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -130,6 +131,7 @@ REST_FRAMEWORK = {
 
 CORS_ALLOW_ALL_ORIGINS = env_bool("DJANGO_CORS_ALLOW_ALL_ORIGINS", True)
 CORS_ALLOWED_ORIGINS = env_list("DJANGO_CORS_ALLOWED_ORIGINS", [])
+CORS_ALLOW_HEADERS = (*default_headers, "x-organizacao-id", "x-organizacao-slug")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", [])
 
 if not DEBUG:
