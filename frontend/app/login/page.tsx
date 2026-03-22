@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/components/AuthProvider";
 
-export default function LoginPage() {
+function LoginPageConteudo() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const { entrar } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +23,7 @@ export default function LoginPage() {
 
     try {
       await entrar({ email, password });
+      router.replace(next || "/");
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao entrar.");
     } finally {
@@ -69,11 +74,25 @@ export default function LoginPage() {
 
         <p className="mt-6 text-sm text-slate-400">
           Ainda nao tem conta?{" "}
-          <Link href="/cadastro" className="font-medium text-accent">
+          <Link href={next ? `/cadastro?next=${encodeURIComponent(next)}` : "/cadastro"} className="font-medium text-accent">
             Criar conta
           </Link>
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#020617,#0f172a)] px-4 py-10">
+          <p className="text-sm text-slate-300">Carregando login...</p>
+        </main>
+      }
+    >
+      <LoginPageConteudo />
+    </Suspense>
   );
 }

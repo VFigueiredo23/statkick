@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/components/AuthProvider";
 
-export default function CadastroPage() {
+function CadastroPageConteudo() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const { registrar } = useAuth();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -21,6 +25,7 @@ export default function CadastroPage() {
 
     try {
       await registrar({ nome, email, password, organizacao_nome: organizacaoNome });
+      router.replace(next || "/");
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao criar conta.");
     } finally {
@@ -92,11 +97,25 @@ export default function CadastroPage() {
 
         <p className="mt-6 text-sm text-slate-400">
           Ja tem conta?{" "}
-          <Link href="/login" className="font-medium text-accent">
+          <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="font-medium text-accent">
             Entrar
           </Link>
         </p>
       </div>
     </main>
+  );
+}
+
+export default function CadastroPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#020617,#0f172a)] px-4 py-10">
+          <p className="text-sm text-slate-300">Carregando cadastro...</p>
+        </main>
+      }
+    >
+      <CadastroPageConteudo />
+    </Suspense>
   );
 }

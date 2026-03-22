@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
+import uuid
 
 
 class Organizacao(models.Model):
@@ -68,3 +69,48 @@ class MembroOrganizacao(models.Model):
 
     def __str__(self) -> str:
         return f"{self.usuario} @ {self.organizacao}"
+
+
+class ConviteOrganizacao(models.Model):
+    STATUS_PENDENTE = "pendente"
+    STATUS_ACEITO = "aceito"
+    STATUS_CANCELADO = "cancelado"
+    STATUS_EXPIRADO = "expirado"
+
+    OPCOES_STATUS = [
+        (STATUS_PENDENTE, "Pendente"),
+        (STATUS_ACEITO, "Aceito"),
+        (STATUS_CANCELADO, "Cancelado"),
+        (STATUS_EXPIRADO, "Expirado"),
+    ]
+
+    organizacao = models.ForeignKey(Organizacao, on_delete=models.CASCADE, related_name="convites")
+    email = models.EmailField()
+    papel = models.CharField(max_length=20, choices=MembroOrganizacao.OPCOES_PAPEL, default=MembroOrganizacao.PAPEL_ANALISTA)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    status = models.CharField(max_length=20, choices=OPCOES_STATUS, default=STATUS_PENDENTE)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="convites_criados",
+    )
+    aceito_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="convites_aceitos",
+    )
+    expira_em = models.DateTimeField()
+    respondido_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em", "-id"]
+        verbose_name = "convite da organizacao"
+        verbose_name_plural = "convites da organizacao"
+
+    def __str__(self) -> str:
+        return f"{self.email} -> {self.organizacao}"

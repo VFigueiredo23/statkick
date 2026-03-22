@@ -4,11 +4,13 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from jogadores.models import AvaliacaoJogador, Jogador
 from jogadores.serializers import AvaliacaoJogadorSerializer, JogadorSerializer
 from organizacoes.contexto import obter_organizacao_atual
+from organizacoes.permissoes import CanAccessScoutingData
 
 
 class JogadorViewSet(viewsets.ModelViewSet):
     serializer_class = JogadorSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    permission_classes = [CanAccessScoutingData]
 
     def get_queryset(self):
         organizacao = obter_organizacao_atual(self.request)
@@ -38,6 +40,7 @@ class JogadorViewSet(viewsets.ModelViewSet):
 
 class AvaliacaoJogadorViewSet(viewsets.ModelViewSet):
     serializer_class = AvaliacaoJogadorSerializer
+    permission_classes = [CanAccessScoutingData]
 
     def get_queryset(self):
         organizacao = obter_organizacao_atual(self.request)

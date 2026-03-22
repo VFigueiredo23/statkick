@@ -3,6 +3,7 @@ from rest_framework import mixins, viewsets
 from eventos.models import Evento
 from eventos.serializers import EventoSerializer
 from organizacoes.contexto import obter_organizacao_atual
+from organizacoes.permissoes import CanAccessScoutingData
 
 
 class EventoViewSet(
@@ -12,6 +13,7 @@ class EventoViewSet(
     viewsets.GenericViewSet,
 ):
     serializer_class = EventoSerializer
+    permission_classes = [CanAccessScoutingData]
 
     def get_queryset(self):
         organizacao = obter_organizacao_atual(self.request)

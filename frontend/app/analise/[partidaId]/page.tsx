@@ -2,6 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 
+import { useAuth } from "@/components/AuthProvider";
 import BarraEventos from "@/components/BarraEventos";
 import CabecalhoAnalise from "@/components/CabecalhoAnalise";
 import LinhaTempoEventos from "@/components/LinhaTempoEventos";
@@ -36,6 +37,8 @@ function formatarCronometro(segundos: number): string {
 
 export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
   const { partidaId } = use(params);
+  const { organizacaoAtual } = useAuth();
+  const podeEditarConteudo = ["owner", "admin", "analista"].includes(organizacaoAtual?.papel ?? "");
   const [partida, setPartida] = useState<Partida | null>(null);
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [jogadores, setJogadores] = useState<Jogador[]>([]);
@@ -51,9 +54,10 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
   const [jogadorAtivoId, setJogadorAtivoId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!partidaId) return;
+    if (!partidaId || !organizacaoAtual) return;
     const carregar = async () => {
       try {
+        setErroCarregamento(null);
         const [dadosPartida, dadosEquipes, dadosJogadores, dadosEventos] = await Promise.all([
           buscarPartida(partidaId),
           listarEquipes(),
@@ -71,7 +75,7 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
     };
 
     carregar();
-  }, [partidaId]);
+  }, [organizacaoAtual?.id, partidaId]);
 
   const jogadoresDaPartida = useMemo(() => {
     if (!partida) return jogadores;
@@ -143,6 +147,10 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
 
   const marcarEventoRapido = async (tipoEvento: string) => {
     if (!partida) return;
+    if (!podeEditarConteudo) {
+      setErroOperacao("Seu papel atual permite apenas visualizar a analise.");
+      return;
+    }
     if (!configuracoesAnalise.some((item) => item.modo !== "nenhum")) {
       setErroOperacao("Defina primeiro o foco da analise para marcar eventos.");
       setModalConfiguracaoAberto(true);
@@ -233,7 +241,7 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
       {erroOperacao && <p className="rounded-lg border border-red-500/40 bg-red-950/40 p-3 text-sm text-red-200">{erroOperacao}</p>}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
-        <BarraEventos aoSelecionarEvento={marcarEventoRapido} />
+        <BarraEventos aoSelecionarEvento={marcarEventoRapido} desabilitado={!podeEditarConteudo} />
         <ReprodutorVideo url={partida.url_video} aoAtualizarTempo={setSegundosVideo} />
       </div>
 

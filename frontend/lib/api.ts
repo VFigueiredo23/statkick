@@ -44,6 +44,48 @@ export type AuthPayload = {
 
 export type AuthSessionPayload = Omit<AuthPayload, "token">;
 
+export type OrganizacaoAtualPayload = {
+  id: number;
+  nome: string;
+  slug: string;
+  status: string;
+  criado_em: string;
+  papel_atual: string | null;
+  pode_gerir: boolean;
+  pode_editar_conteudo: boolean;
+  total_membros: number;
+};
+
+export type MembroOrganizacaoPayload = {
+  id: number;
+  papel: string;
+  ativo: boolean;
+  criado_em: string;
+  usuario: UsuarioLogado;
+};
+
+export type ConviteOrganizacaoPayload = {
+  id: number;
+  email: string;
+  papel: string;
+  status: string;
+  token: string;
+  link_convite: string;
+  expira_em: string;
+  respondido_em: string | null;
+  criado_em: string;
+  criado_por: UsuarioLogado | null;
+};
+
+export type ConvitePublicoPayload = {
+  email: string;
+  papel: string;
+  status: string;
+  expira_em: string;
+  criado_em: string;
+  organizacao: OrganizacaoAtualPayload;
+};
+
 export type LoginPayload = {
   email: string;
   password: string;
@@ -462,4 +504,109 @@ export async function efetuarLogout(): Promise<void> {
   }
 
   limparSessaoLocal();
+}
+
+export async function buscarOrganizacaoAtual(): Promise<OrganizacaoAtualPayload> {
+  const resposta = await apiFetch("/organizacoes/atual", { cache: "no-store" });
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao carregar organizacao."));
+  }
+  return resposta.json();
+}
+
+export async function atualizarOrganizacaoAtual(payload: { nome: string }): Promise<OrganizacaoAtualPayload> {
+  const resposta = await apiFetch("/organizacoes/atual", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao atualizar organizacao."));
+  }
+
+  return resposta.json();
+}
+
+export async function listarMembrosOrganizacaoAtual(): Promise<MembroOrganizacaoPayload[]> {
+  const resposta = await apiFetch("/organizacoes/atual/membros", { cache: "no-store" });
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao carregar membros."));
+  }
+  return resposta.json();
+}
+
+export async function atualizarMembroOrganizacao(
+  membroId: number,
+  payload: { papel?: string; ativo?: boolean }
+): Promise<MembroOrganizacaoPayload> {
+  const resposta = await apiFetch(`/organizacoes/membros/${membroId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao atualizar membro."));
+  }
+
+  return resposta.json();
+}
+
+export async function listarConvitesOrganizacaoAtual(): Promise<ConviteOrganizacaoPayload[]> {
+  const resposta = await apiFetch("/organizacoes/atual/convites", { cache: "no-store" });
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao carregar convites."));
+  }
+  return resposta.json();
+}
+
+export async function criarConviteOrganizacao(payload: { email: string; papel: string }): Promise<ConviteOrganizacaoPayload> {
+  const resposta = await apiFetch("/organizacoes/atual/convites", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao criar convite."));
+  }
+
+  return resposta.json();
+}
+
+export async function cancelarConviteOrganizacao(token: string): Promise<ConviteOrganizacaoPayload> {
+  const resposta = await apiFetch(`/organizacoes/convites/${token}/cancelar`, {
+    method: "POST",
+  });
+
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao cancelar convite."));
+  }
+
+  return resposta.json();
+}
+
+export async function buscarConvitePublico(token: string): Promise<ConvitePublicoPayload> {
+  const resposta = await fetch(`${URL_API}/organizacoes/convites/${token}`, {
+    cache: "no-store",
+  });
+
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao carregar convite."));
+  }
+
+  return resposta.json();
+}
+
+export async function aceitarConviteOrganizacao(token: string): Promise<MembroOrganizacaoPayload> {
+  const resposta = await apiFetch(`/organizacoes/convites/${token}/aceitar`, {
+    method: "POST",
+  });
+
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao aceitar convite."));
+  }
+
+  return resposta.json();
 }

@@ -46,6 +46,20 @@ def obter_organizacao_atual(request) -> Organizacao:
     return membro.organizacao
 
 
+def obter_membro_atual(request, organizacao: Organizacao | None = None):
+    usuario = getattr(request, "user", None)
+    if usuario is None or not getattr(usuario, "is_authenticated", False):
+        return None
+
+    organizacao = organizacao or obter_organizacao_atual(request)
+    return (
+        MembroOrganizacao.objects.select_related("organizacao")
+        .filter(usuario=usuario, organizacao=organizacao, ativo=True)
+        .order_by("id")
+        .first()
+    )
+
+
 def garantir_membro_na_organizacao_default(usuario):
     if usuario is None or not getattr(usuario, "is_authenticated", False):
         return None

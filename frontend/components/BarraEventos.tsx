@@ -19,9 +19,10 @@ const TIPOS_EVENTO = [
 
 type BarraEventosProps = {
   aoSelecionarEvento: (tipoEvento: string) => void;
+  desabilitado?: boolean;
 };
 
-export default function BarraEventos({ aoSelecionarEvento }: BarraEventosProps) {
+export default function BarraEventos({ aoSelecionarEvento, desabilitado = false }: BarraEventosProps) {
   return (
     <aside className="rounded-xl border border-slate-700 bg-panel p-4">
       <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Eventos</h2>
@@ -29,6 +30,8 @@ export default function BarraEventos({ aoSelecionarEvento }: BarraEventosProps) 
         {TIPOS_EVENTO.map((tipo) => (
           <button
             key={tipo}
+            type="button"
+            disabled={desabilitado}
             className="rounded border border-slate-600 px-3 py-2 text-left text-sm text-slate-200 transition hover:border-accent hover:text-accent"
             onClick={() => aoSelecionarEvento(tipo)}
           >

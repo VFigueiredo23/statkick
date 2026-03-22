@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { useAuth } from "@/components/AuthProvider";
 import { Equipe, PayloadEquipe, atualizarEquipe, criarEquipe, listarEquipes, listarJogadores } from "@/lib/api";
 
 const ESTADO_INICIAL_FORMULARIO = {
@@ -22,6 +23,8 @@ function montarPayload(formulario: typeof ESTADO_INICIAL_FORMULARIO): PayloadEqu
 }
 
 export default function PaginaEquipes() {
+  const { organizacaoAtual } = useAuth();
+  const podeEditarConteudo = ["owner", "admin", "analista"].includes(organizacaoAtual?.papel ?? "");
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -52,8 +55,9 @@ export default function PaginaEquipes() {
   };
 
   useEffect(() => {
+    if (!organizacaoAtual) return;
     carregarDados();
-  }, []);
+  }, [organizacaoAtual?.id]);
 
   const equipesFiltradas = useMemo(() => {
     return equipes.filter((equipe) => {
@@ -74,6 +78,7 @@ export default function PaginaEquipes() {
   };
 
   const iniciarEdicao = (equipe: Equipe) => {
+    if (!podeEditarConteudo) return;
     setEquipeEmEdicao(equipe);
     setFormulario({
       nome: equipe.nome,
@@ -88,6 +93,10 @@ export default function PaginaEquipes() {
   const submit = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     setErro(null);
+    if (!podeEditarConteudo) {
+      setErro("Seu papel atual nao permite editar equipes.");
+      return;
+    }
 
     if (!formulario.nome.trim()) {
       setErro("Preencha o nome da equipe.");
@@ -123,6 +132,7 @@ export default function PaginaEquipes() {
           <p className="mt-2 text-sm leading-6 text-slate-300">
             Organize sua base de clubes com brasao, categoria interna e informacoes que facilitem o trabalho do analista.
           </p>
+          {!podeEditarConteudo && <p className="mt-4 text-sm text-slate-400">Seu papel atual permite apenas visualizacao.</p>}
 
           <form className="mt-6 space-y-4" onSubmit={submit}>
             <label className="block text-sm text-slate-300">
@@ -182,7 +192,7 @@ export default function PaginaEquipes() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="submit"
-                disabled={salvando}
+                disabled={salvando || !podeEditarConteudo}
                 className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-black disabled:opacity-60"
               >
                 {salvando ? "Salvando..." : equipeEmEdicao ? "Salvar alteracoes" : "Cadastrar equipe"}
@@ -243,6 +253,7 @@ export default function PaginaEquipes() {
 
                     <button
                       type="button"
+                      disabled={!podeEditarConteudo}
                       className="rounded-xl border border-slate-600 px-3 py-2 text-xs font-semibold text-white transition hover:border-accent hover:text-accent"
                       onClick={() => iniciarEdicao(equipe)}
                     >

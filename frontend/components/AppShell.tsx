@@ -6,7 +6,13 @@ import { useEffect } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
 
-const ROTAS_PUBLICAS = new Set(["/login", "/cadastro"]);
+function ehRotaAuth(pathname: string) {
+  return pathname === "/login" || pathname === "/cadastro";
+}
+
+function ehRotaPublica(pathname: string) {
+  return ehRotaAuth(pathname) || pathname.startsWith("/convites/");
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,12 +22,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (carregando) return;
 
-    if (!autenticado && !ROTAS_PUBLICAS.has(pathname)) {
-      router.replace("/login");
+    if (!autenticado && !ehRotaPublica(pathname)) {
+      const next = encodeURIComponent(pathname);
+      router.replace(`/login?next=${next}`);
       return;
     }
 
-    if (autenticado && ROTAS_PUBLICAS.has(pathname)) {
+    if (autenticado && ehRotaAuth(pathname)) {
       router.replace("/");
     }
   }, [autenticado, carregando, pathname, router]);
@@ -34,11 +41,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!autenticado && ROTAS_PUBLICAS.has(pathname)) {
+  if (!autenticado && ehRotaPublica(pathname)) {
     return <>{children}</>;
   }
 
-  if (autenticado && ROTAS_PUBLICAS.has(pathname)) {
+  if (autenticado && ehRotaAuth(pathname)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm text-slate-300">
         Redirecionando...
@@ -72,16 +79,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Link href="/jogadores" className="rounded-full px-3 py-2 text-slate-300 transition hover:bg-slate-800 hover:text-white">
                 Jogadores
               </Link>
+              <Link href="/organizacao" className="rounded-full px-3 py-2 text-slate-300 transition hover:bg-slate-800 hover:text-white">
+                Organizacao
+              </Link>
             </nav>
           </div>
 
           <div className="flex flex-col gap-2 text-sm md:flex-row md:items-center">
             <select
               value={organizacaoAtual ? String(organizacaoAtual.id) : ""}
-              onChange={(evento) => {
-                selecionarOrganizacao(evento.target.value);
-                window.location.reload();
-              }}
+              onChange={(evento) => selecionarOrganizacao(evento.target.value)}
               className="rounded-full border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200"
             >
               {organizacoes.map((organizacao) => (

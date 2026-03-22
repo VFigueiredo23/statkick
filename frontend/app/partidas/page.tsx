@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { useAuth } from "@/components/AuthProvider";
 import { Partida, criarPartida, listarPartidas } from "@/lib/api";
 
 function formatarData(valor: string): string {
@@ -10,6 +11,8 @@ function formatarData(valor: string): string {
 }
 
 export default function PaginaPartidas() {
+  const { organizacaoAtual } = useAuth();
+  const podeEditarConteudo = ["owner", "admin", "analista"].includes(organizacaoAtual?.papel ?? "");
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -43,12 +46,17 @@ export default function PaginaPartidas() {
   };
 
   useEffect(() => {
+    if (!organizacaoAtual) return;
     carregarDados();
-  }, []);
+  }, [organizacaoAtual?.id]);
 
   const submit = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     if (!podeEnviar) return;
+    if (!podeEditarConteudo) {
+      setErro("Seu papel atual nao permite criar partidas.");
+      return;
+    }
 
     try {
       setSalvando(true);
@@ -82,6 +90,7 @@ export default function PaginaPartidas() {
 
       <section id="cadastro-partida" className="mb-8 rounded-xl border border-slate-700 bg-panel p-4">
         <h2 className="mb-4 text-lg font-semibold text-white">Cadastrar partida</h2>
+        {!podeEditarConteudo && <p className="mb-4 text-sm text-slate-400">Seu papel atual permite apenas visualizacao.</p>}
 
         <form className="grid grid-cols-1 gap-3 md:grid-cols-2" onSubmit={submit}>
           <label className="text-sm text-slate-300">
@@ -151,7 +160,7 @@ export default function PaginaPartidas() {
           <div className="md:col-span-2">
             <button
               type="submit"
-              disabled={!podeEnviar || salvando}
+              disabled={!podeEnviar || salvando || !podeEditarConteudo}
               className="rounded bg-accent px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
             >
               {salvando ? "Salvando..." : "Salvar partida"}

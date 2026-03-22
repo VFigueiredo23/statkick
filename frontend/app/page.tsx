@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useAuth } from "@/components/AuthProvider";
 import { Equipe, Jogador, Partida, listarEquipes, listarJogadores, listarPartidas } from "@/lib/api";
 
 function formatarData(valor: string): string {
@@ -73,6 +74,7 @@ function AcaoCard({
 }
 
 export default function HomePage() {
+  const { organizacaoAtual } = useAuth();
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [jogadores, setJogadores] = useState<Jogador[]>([]);
@@ -80,9 +82,11 @@ export default function HomePage() {
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!organizacaoAtual) return;
     const carregar = async () => {
       try {
         setCarregando(true);
+        setErro(null);
         const [dadosPartidas, dadosEquipes, dadosJogadores] = await Promise.all([
           listarPartidas(),
           listarEquipes(),
@@ -99,7 +103,7 @@ export default function HomePage() {
     };
 
     carregar();
-  }, []);
+  }, [organizacaoAtual?.id]);
 
   const resumo = useMemo(() => {
     const independentes = jogadores.filter((jogador) => jogador.independente).length;

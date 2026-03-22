@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from eventos.serializers import EventoSerializer
 from organizacoes.contexto import obter_organizacao_atual
+from organizacoes.permissoes import CanAccessScoutingData
 from partidas.models import Partida
 from partidas.serializers import PartidaSerializer
 
@@ -17,6 +18,7 @@ class PartidaViewSet(
 ):
     serializer_class = PartidaSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    permission_classes = [CanAccessScoutingData]
 
     def get_queryset(self):
         organizacao = obter_organizacao_atual(self.request)

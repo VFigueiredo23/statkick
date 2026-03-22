@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
+import { useAuth } from "@/components/AuthProvider";
 import CartaoScoutJogador from "@/components/CartaoScoutJogador";
 import RadarAtributos from "@/components/RadarAtributos";
 import {
@@ -170,6 +171,8 @@ function CampoAtributo({
 }
 
 export default function PaginaJogadores() {
+  const { organizacaoAtual } = useAuth();
+  const podeEditarConteudo = ["owner", "admin", "analista"].includes(organizacaoAtual?.papel ?? "");
   const carrosselRef = useRef<HTMLDivElement | null>(null);
   const [jogadores, setJogadores] = useState<Jogador[]>([]);
   const [equipes, setEquipes] = useState<Equipe[]>([]);
@@ -201,8 +204,9 @@ export default function PaginaJogadores() {
   };
 
   useEffect(() => {
+    if (!organizacaoAtual) return;
     carregarDados();
-  }, []);
+  }, [organizacaoAtual?.id]);
 
   const jogadorEmAvaliacao = useMemo(
     () => jogadores.find((jogador) => jogador.id === jogadorEmAvaliacaoId) ?? null,
@@ -246,6 +250,7 @@ export default function PaginaJogadores() {
   };
 
   const iniciarEdicao = (jogador: Jogador) => {
+    if (!podeEditarConteudo) return;
     setJogadorEmEdicao(jogador);
     setFormulario({
       nome: jogador.nome,
@@ -264,6 +269,7 @@ export default function PaginaJogadores() {
   };
 
   const iniciarAvaliacao = (jogador: Jogador) => {
+    if (!podeEditarConteudo) return;
     setJogadorEmAvaliacaoId(jogador.id);
     setFormularioAvaliacao(preencherAvaliacao(jogador.ultima_avaliacao));
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -272,6 +278,10 @@ export default function PaginaJogadores() {
   const submit = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     setErro(null);
+    if (!podeEditarConteudo) {
+      setErro("Seu papel atual nao permite editar jogadores.");
+      return;
+    }
 
     if (!formulario.nome.trim() || !formulario.posicao.trim() || !formulario.idade) {
       setErro("Preencha nome, posicao e idade do atleta.");
@@ -308,6 +318,10 @@ export default function PaginaJogadores() {
   const submitAvaliacao = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     setErro(null);
+    if (!podeEditarConteudo) {
+      setErro("Seu papel atual nao permite registrar avaliacoes.");
+      return;
+    }
 
     if (!jogadorEmAvaliacao) {
       setErro("Selecione um atleta para registrar a avaliacao.");
@@ -339,6 +353,7 @@ export default function PaginaJogadores() {
             <p className="mt-2 text-sm leading-6 text-slate-300">
               Cadastre o perfil base do atleta, suba a foto e deixe o restante da leitura tecnica para as avaliacoes.
             </p>
+            {!podeEditarConteudo && <p className="mt-4 text-sm text-slate-400">Seu papel atual permite apenas visualizacao.</p>}
 
             <form className="mt-6 space-y-4" onSubmit={submit}>
               <label className="block text-sm text-slate-300">
@@ -452,7 +467,7 @@ export default function PaginaJogadores() {
               <div className="flex flex-wrap gap-3">
                 <button
                   type="submit"
-                  disabled={salvando}
+                  disabled={salvando || !podeEditarConteudo}
                   className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-black disabled:opacity-60"
                 >
                   {salvando ? "Salvando..." : jogadorEmEdicao ? "Salvar alteracoes" : "Cadastrar jogador"}
@@ -539,7 +554,7 @@ export default function PaginaJogadores() {
               <div className="flex flex-wrap gap-3">
                 <button
                   type="submit"
-                  disabled={salvandoAvaliacao || !jogadorEmAvaliacao}
+                  disabled={salvandoAvaliacao || !jogadorEmAvaliacao || !podeEditarConteudo}
                   className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-black disabled:opacity-60"
                 >
                   {salvandoAvaliacao ? "Salvando leitura..." : "Salvar avaliacao"}
