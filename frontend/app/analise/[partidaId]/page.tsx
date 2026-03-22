@@ -283,11 +283,14 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
               configuracoes={configuracoesAnalise}
               equipeAtivaId={equipeAtivaId}
               jogadorAtivoId={jogadorAtivoId}
+              zonaAtual={posicaoSelecionada}
               aoSelecionarEquipe={selecionarEquipeAtiva}
               aoSelecionarJogador={setJogadorAtivoId}
+              aoMarcarEventoNaZona={marcarEventoRapido}
               aoReconfigurar={() => setModalConfiguracaoAberto(true)}
               salvandoEvento={salvandoEvento}
               feedback={feedbackEvento}
+              podeEditarConteudo={podeEditarConteudo}
             />
             <BarraEventos aoSelecionarEvento={marcarEventoRapido} desabilitado={!podeEditarConteudo} />
           </div>

@@ -312,7 +312,7 @@ export default function ReprodutorVideo({ url, aoAtualizarTempo }: ReprodutorVid
             onPlay={() => setEstaTocando(true)}
           />
         )}
-        <OverlayTaticoVideo resetKey={url} />
+        <OverlayTaticoVideo resetKey={url} tempoAtual={tempoAtual} />
       </div>
 
       <div className="space-y-3">

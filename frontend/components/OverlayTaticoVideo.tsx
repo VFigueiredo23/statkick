@@ -15,6 +15,12 @@ type Anotacao = {
   cor: string;
   inicio: Ponto;
   fim: Ponto;
+  keyframes?: Array<{
+    tempo: number;
+    x: number;
+    y: number;
+    raio: number;
+  }>;
 };
 
 type ArrasteAtivo = {
@@ -22,6 +28,9 @@ type ArrasteAtivo = {
   origem: Ponto;
   inicioOriginal: Ponto;
   fimOriginal: Ponto;
+  tempo?: number;
+  raioOriginal?: number;
+  modo?: "shape" | "holofote";
 };
 
 const CORES = ["#22c55e", "#f97316", "#38bdf8", "#facc15", "#f8fafc"];
@@ -51,18 +60,54 @@ function calcularRaio(anotacao: Anotacao) {
   return Math.max(Math.abs(anotacao.fim.x - anotacao.inicio.x), Math.abs(anotacao.fim.y - anotacao.inicio.y), 4);
 }
 
+function obterEstadoHolofote(anotacao: Anotacao, tempoAtual: number) {
+  const raioPadrao = calcularRaio(anotacao);
+  const frames = [...(anotacao.keyframes ?? [])].sort((a, b) => a.tempo - b.tempo);
+
+  if (!frames.length) {
+    return { x: anotacao.inicio.x, y: anotacao.inicio.y, raio: raioPadrao };
+  }
+
+  if (frames.length === 1 || tempoAtual <= frames[0].tempo) {
+    return { x: frames[0].x, y: frames[0].y, raio: frames[0].raio };
+  }
+
+  const ultimo = frames[frames.length - 1];
+  if (tempoAtual >= ultimo.tempo) {
+    return { x: ultimo.x, y: ultimo.y, raio: ultimo.raio };
+  }
+
+  for (let indice = 0; indice < frames.length - 1; indice += 1) {
+    const atual = frames[indice];
+    const proximo = frames[indice + 1];
+    if (tempoAtual >= atual.tempo && tempoAtual <= proximo.tempo) {
+      const intervalo = Math.max(proximo.tempo - atual.tempo, 0.001);
+      const proporcao = (tempoAtual - atual.tempo) / intervalo;
+      return {
+        x: atual.x + (proximo.x - atual.x) * proporcao,
+        y: atual.y + (proximo.y - atual.y) * proporcao,
+        raio: atual.raio + (proximo.raio - atual.raio) * proporcao,
+      };
+    }
+  }
+
+  return { x: ultimo.x, y: ultimo.y, raio: ultimo.raio };
+}
+
 function RenderizarAnotacao({
   anotacao,
   markerId,
   selecionada,
   emCursor,
   aoSelecionar,
+  tempoAtual,
 }: {
   anotacao: Anotacao;
   markerId: string;
   selecionada: boolean;
   emCursor: boolean;
   aoSelecionar: (evento: PointerEvent<SVGGElement>) => void;
+  tempoAtual: number;
 }) {
   const strokeWidth = selecionada ? 1.15 : 0.85;
   const strokeDasharray = selecionada ? "0" : undefined;
@@ -82,17 +127,18 @@ function RenderizarAnotacao({
   }
 
   if (anotacao.ferramenta === "holofote") {
-    const raio = calcularRaio(anotacao);
+    const estado = obterEstadoHolofote(anotacao, tempoAtual);
+    const raio = estado.raio;
 
     return (
       <g onPointerDown={aoSelecionar} className={emCursor ? "cursor-move" : undefined}>
-        <circle cx={anotacao.inicio.x} cy={anotacao.inicio.y} r={raio + 1.8} fill={`${anotacao.cor}10`} />
-        <circle cx={anotacao.inicio.x} cy={anotacao.inicio.y} r={raio + 4.5} fill={`${anotacao.cor}18`}>
+        <circle cx={estado.x} cy={estado.y} r={raio + 1.8} fill={`${anotacao.cor}10`} />
+        <circle cx={estado.x} cy={estado.y} r={raio + 4.5} fill={`${anotacao.cor}18`}>
           <animate attributeName="opacity" values="0.18;0.35;0.18" dur="1.4s" repeatCount="indefinite" />
         </circle>
-        <circle cx={anotacao.inicio.x} cy={anotacao.inicio.y} r={raio} fill="transparent" stroke={anotacao.cor} strokeWidth={strokeWidth} />
-        <circle cx={anotacao.inicio.x} cy={anotacao.inicio.y} r={raio + 3.8} fill="transparent" stroke={`${anotacao.cor}66`} strokeWidth="0.45" />
-        <circle cx={anotacao.inicio.x} cy={anotacao.inicio.y} r={raio + 7} fill="transparent" stroke="transparent" strokeWidth="8" />
+        <circle cx={estado.x} cy={estado.y} r={raio} fill="transparent" stroke={anotacao.cor} strokeWidth={strokeWidth} />
+        <circle cx={estado.x} cy={estado.y} r={raio + 3.8} fill="transparent" stroke={`${anotacao.cor}66`} strokeWidth="0.45" />
+        <circle cx={estado.x} cy={estado.y} r={raio + 7} fill="transparent" stroke="transparent" strokeWidth="8" />
       </g>
     );
   }
@@ -135,7 +181,7 @@ function RenderizarAnotacao({
   );
 }
 
-export default function OverlayTaticoVideo({ resetKey }: { resetKey: string }) {
+export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey: string; tempoAtual: number }) {
   const [ferramenta, setFerramenta] = useState<FerramentaDesenho>("cursor");
   const [corAtual, setCorAtual] = useState(CORES[0]);
   const [anotacoes, setAnotacoes] = useState<Anotacao[]>([]);
@@ -170,6 +216,17 @@ export default function OverlayTaticoVideo({ resetKey }: { resetKey: string }) {
       cor: corAtual,
       inicio: ponto,
       fim: ponto,
+      keyframes:
+        ferramenta === "holofote"
+          ? [
+              {
+                tempo: tempoAtual,
+                x: ponto.x,
+                y: ponto.y,
+                raio: 4,
+              },
+            ]
+          : undefined,
     });
   };
 
@@ -182,7 +239,20 @@ export default function OverlayTaticoVideo({ resetKey }: { resetKey: string }) {
       setAnotacoes((atual) =>
         atual.map((item) =>
           item.id === arrasteAtivo.id
-            ? {
+            ? arrasteAtivo.modo === "holofote"
+              ? {
+                  ...item,
+                  keyframes: [
+                    ...(item.keyframes ?? []).filter((frame) => Math.abs(frame.tempo - (arrasteAtivo.tempo ?? tempoAtual)) > 0.05),
+                    {
+                      tempo: arrasteAtivo.tempo ?? tempoAtual,
+                      x: limitar(arrasteAtivo.inicioOriginal.x + deltaX),
+                      y: limitar(arrasteAtivo.inicioOriginal.y + deltaY),
+                      raio: arrasteAtivo.raioOriginal ?? calcularRaio(item),
+                    },
+                  ].sort((a, b) => a.tempo - b.tempo),
+                }
+              : {
                 ...item,
                 inicio: {
                   x: limitar(arrasteAtivo.inicioOriginal.x + deltaX),
@@ -212,7 +282,21 @@ export default function OverlayTaticoVideo({ resetKey }: { resetKey: string }) {
 
     if (!rascunho) return;
     const ponto = obterPonto(evento);
-    const final = { ...rascunho, fim: ponto };
+    const final = {
+      ...rascunho,
+      fim: ponto,
+      keyframes:
+        rascunho.ferramenta === "holofote"
+          ? [
+              {
+                tempo: tempoAtual,
+                x: rascunho.inicio.x,
+                y: rascunho.inicio.y,
+                raio: Math.max(Math.abs(ponto.x - rascunho.inicio.x), Math.abs(ponto.y - rascunho.inicio.y), 4),
+              },
+            ]
+          : rascunho.keyframes,
+    };
     setAnotacoes((atual) => [...atual, final]);
     setSelecionadaId(final.id);
     setRascunho(null);
@@ -226,11 +310,15 @@ export default function OverlayTaticoVideo({ resetKey }: { resetKey: string }) {
     if (ferramenta !== "cursor") return;
 
     const ponto = obterPonto(evento as unknown as PointerEvent<SVGSVGElement>);
+    const estadoHolofote = anotacao.ferramenta === "holofote" ? obterEstadoHolofote(anotacao, tempoAtual) : null;
     setArrasteAtivo({
       id: anotacao.id,
       origem: ponto,
-      inicioOriginal: anotacao.inicio,
-      fimOriginal: anotacao.fim,
+      inicioOriginal: estadoHolofote ? { x: estadoHolofote.x, y: estadoHolofote.y } : anotacao.inicio,
+      fimOriginal: estadoHolofote ? { x: estadoHolofote.x + estadoHolofote.raio, y: estadoHolofote.y + estadoHolofote.raio } : anotacao.fim,
+      tempo: anotacao.ferramenta === "holofote" ? tempoAtual : undefined,
+      raioOriginal: estadoHolofote?.raio,
+      modo: anotacao.ferramenta === "holofote" ? "holofote" : "shape",
     });
   };
 
@@ -317,6 +405,7 @@ export default function OverlayTaticoVideo({ resetKey }: { resetKey: string }) {
             selecionada={selecionadaId === anotacao.id}
             emCursor={ferramenta === "cursor"}
             aoSelecionar={(evento) => selecionarAnotacao(anotacao, evento)}
+            tempoAtual={tempoAtual}
           />
         ))}
         {rascunho && (
@@ -326,12 +415,13 @@ export default function OverlayTaticoVideo({ resetKey }: { resetKey: string }) {
             selecionada={false}
             emCursor={false}
             aoSelecionar={() => undefined}
+            tempoAtual={tempoAtual}
           />
         )}
       </svg>
 
       <div className="absolute bottom-3 left-3 z-20 rounded-full border border-slate-800/90 bg-slate-950/75 px-3 py-1.5 text-xs text-slate-300 backdrop-blur">
-        Use o cursor para selecionar, arrastar e remover uma marcacao individual.
+        Use o cursor para selecionar, arrastar e remover. No holofote, reposicione em tempos diferentes para ele acompanhar o lance.
       </div>
 
       {!!anotacoesOrdenadas.length && (
