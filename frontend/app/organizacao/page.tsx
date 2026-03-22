@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { rotuloPapel, rotuloPlano } from "@/lib/papeis";
 import {
+  AuditLogPayload,
   ConviteOrganizacaoPayload,
   MembroOrganizacaoPayload,
   OrganizacaoAtualPayload,
@@ -15,6 +16,7 @@ import {
   criarConviteOrganizacao,
   listarConvitesOrganizacaoAtual,
   listarMembrosOrganizacaoAtual,
+  listarAuditoriaOrganizacaoAtual,
 } from "@/lib/api";
 
 const OPCOES_PAPEL = [
@@ -58,6 +60,7 @@ export default function PaginaOrganizacao() {
   const [organizacao, setOrganizacao] = useState<OrganizacaoAtualPayload | null>(null);
   const [membros, setMembros] = useState<MembroOrganizacaoPayload[]>([]);
   const [convites, setConvites] = useState<ConviteOrganizacaoPayload[]>([]);
+  const [auditoria, setAuditoria] = useState<AuditLogPayload[]>([]);
   const [nomeOrganizacao, setNomeOrganizacao] = useState("");
   const [emailConvite, setEmailConvite] = useState("");
   const [papelConvite, setPapelConvite] = useState("analista");
@@ -74,15 +77,17 @@ export default function PaginaOrganizacao() {
       try {
         setCarregando(true);
         setErro(null);
-        const [dadosOrganizacao, dadosMembros, dadosConvites] = await Promise.all([
+        const [dadosOrganizacao, dadosMembros, dadosConvites, dadosAuditoria] = await Promise.all([
           buscarOrganizacaoAtual(),
           listarMembrosOrganizacaoAtual(),
           listarConvitesOrganizacaoAtual(),
+          listarAuditoriaOrganizacaoAtual(),
         ]);
         setOrganizacao(dadosOrganizacao);
         setNomeOrganizacao(dadosOrganizacao.nome);
         setMembros(dadosMembros);
         setConvites(dadosConvites);
+        setAuditoria(dadosAuditoria);
       } catch (error) {
         setErro(error instanceof Error ? error.message : "Falha ao carregar organizacao.");
       } finally {
@@ -148,6 +153,7 @@ export default function PaginaOrganizacao() {
       setOrganizacao(atualizado);
       setNomeOrganizacao(atualizado.nome);
       await atualizarSessao();
+      setAuditoria(await listarAuditoriaOrganizacaoAtual());
       setMensagem("Organizacao atualizada.");
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao atualizar organizacao.");
@@ -163,6 +169,7 @@ export default function PaginaOrganizacao() {
       const atualizado = await atualizarMembroOrganizacao(membro.id, payload);
       setMembros((atual) => atual.map((item) => (item.id === atualizado.id ? atualizado : item)));
       await atualizarSessao();
+      setAuditoria(await listarAuditoriaOrganizacaoAtual());
       setMensagem("Membro atualizado.");
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao atualizar membro.");
@@ -179,6 +186,7 @@ export default function PaginaOrganizacao() {
       setMensagem(null);
       const convite = await criarConviteOrganizacao({ email: emailConvite.trim(), papel: papelConvite });
       setConvites((atual) => [convite, ...atual]);
+      setAuditoria(await listarAuditoriaOrganizacaoAtual());
       setEmailConvite("");
       setPapelConvite("analista");
       setMensagem("Convite criado.");
@@ -208,6 +216,7 @@ export default function PaginaOrganizacao() {
       setMensagem(null);
       const atualizado = await cancelarConviteOrganizacao(token);
       setConvites((atual) => atual.map((item) => (item.token === atualizado.token ? atualizado : item)));
+      setAuditoria(await listarAuditoriaOrganizacaoAtual());
       setMensagem("Convite cancelado.");
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao cancelar convite.");
@@ -246,6 +255,29 @@ export default function PaginaOrganizacao() {
 
         {mensagem && <p className="mt-4 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent">{mensagem}</p>}
         {erro && <p className="mt-4 rounded-2xl border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{erro}</p>}
+      </section>
+
+      <section className="mt-6 rounded-[28px] border border-slate-700/70 bg-panel p-6">
+        <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Atividade</p>
+        <h2 className="mt-2 text-2xl font-semibold text-white">Historico recente do workspace</h2>
+
+        <div className="mt-6 space-y-3">
+          {auditoria.map((item) => (
+            <article key={item.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">{item.descricao || item.acao}</p>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {item.usuario?.nome ?? "Sistema"} · {formatarData(item.criado_em)}
+                  </p>
+                </div>
+                <div className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">{item.acao}</div>
+              </div>
+            </article>
+          ))}
+
+          {!auditoria.length && <p className="text-sm text-slate-400">Nenhuma atividade registrada ainda.</p>}
+        </div>
       </section>
 
       <section className="mt-6 rounded-[28px] border border-slate-700/70 bg-panel p-6">

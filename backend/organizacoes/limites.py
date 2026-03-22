@@ -2,6 +2,8 @@ from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from organizacoes.auditoria import registrar_auditoria
+from organizacoes.models import AuditLog
 from organizacoes.models import ConviteOrganizacao, MembroOrganizacao, Organizacao
 
 
@@ -119,3 +121,15 @@ def pode_editar_conteudo(membro: MembroOrganizacao | None):
         MembroOrganizacao.PAPEL_ADMIN,
         MembroOrganizacao.PAPEL_ANALISTA,
     }
+
+
+def registrar_limite_bloqueado(*, organizacao: Organizacao, usuario=None, chave: str, detalhe: str):
+    registrar_auditoria(
+        organizacao=organizacao,
+        usuario=usuario,
+        acao=AuditLog.ACAO_LIMITE_BLOQUEADO,
+        recurso_tipo="limite",
+        recurso_id=chave,
+        descricao=detalhe,
+        metadata={"chave": chave},
+    )

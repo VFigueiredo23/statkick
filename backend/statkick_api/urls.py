@@ -15,6 +15,7 @@ from organizacoes.views import (
     OrganizacaoConvitesView,
     OrganizacaoMembroDetalheView,
     OrganizacaoMembrosView,
+    OrganizacaoAuditoriaView,
 )
 from partidas.views import PartidaViewSet
 from usuarios.views import AuthLoginView, AuthLogoutView, AuthMeView, AuthRegisterView, HealthCheckView
@@ -36,6 +37,7 @@ urlpatterns = [
     path("organizacoes/atual", OrganizacaoAtualView.as_view()),
     path("organizacoes/atual/membros", OrganizacaoMembrosView.as_view()),
     path("organizacoes/atual/convites", OrganizacaoConvitesView.as_view()),
+    path("organizacoes/atual/auditoria", OrganizacaoAuditoriaView.as_view()),
     path("organizacoes/membros/<int:membro_id>", OrganizacaoMembroDetalheView.as_view()),
     path("organizacoes/convites/<uuid:token>", ConviteDetalheView.as_view()),
     path("organizacoes/convites/<uuid:token>/aceitar", ConviteAceitarView.as_view()),

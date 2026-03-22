@@ -130,3 +130,42 @@ class ConviteOrganizacao(models.Model):
 
     def __str__(self) -> str:
         return f"{self.email} -> {self.organizacao}"
+
+
+class AuditLog(models.Model):
+    ACAO_AUTH_LOGIN = "auth.login"
+    ACAO_AUTH_REGISTER = "auth.register"
+    ACAO_ORGANIZACAO_ATUALIZADA = "organizacao.atualizada"
+    ACAO_CONVITE_CRIADO = "convite.criado"
+    ACAO_CONVITE_CANCELADO = "convite.cancelado"
+    ACAO_CONVITE_ACEITO = "convite.aceito"
+    ACAO_MEMBRO_ATUALIZADO = "membro.atualizado"
+    ACAO_EQUIPE_CRIADA = "equipe.criada"
+    ACAO_JOGADOR_CRIADO = "jogador.criado"
+    ACAO_AVALIACAO_CRIADA = "avaliacao.criada"
+    ACAO_PARTIDA_CRIADA = "partida.criada"
+    ACAO_EVENTO_CRIADO = "evento.criado"
+    ACAO_LIMITE_BLOQUEADO = "limite.bloqueado"
+
+    organizacao = models.ForeignKey(Organizacao, on_delete=models.CASCADE, related_name="auditorias")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="auditorias",
+    )
+    acao = models.CharField(max_length=80)
+    recurso_tipo = models.CharField(max_length=80, blank=True)
+    recurso_id = models.CharField(max_length=80, blank=True)
+    descricao = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em", "-id"]
+        verbose_name = "log de auditoria"
+        verbose_name_plural = "logs de auditoria"
+
+    def __str__(self) -> str:
+        return f"{self.organizacao} - {self.acao}"

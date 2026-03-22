@@ -1,11 +1,14 @@
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from eventos.serializers import EventoSerializer
+from organizacoes.auditoria import registrar_auditoria
 from organizacoes.contexto import obter_organizacao_atual
-from organizacoes.limites import garantir_limite_armazenamento, garantir_limite_entidade
+from organizacoes.limites import garantir_limite_armazenamento, garantir_limite_entidade, registrar_limite_bloqueado
+from organizacoes.models import AuditLog
 from organizacoes.permissoes import CanAccessScoutingData
 from partidas.models import Partida
 from partidas.serializers import PartidaSerializer
@@ -27,11 +30,38 @@ class PartidaViewSet(
 
     def perform_create(self, serializer):
         organizacao = obter_organizacao_atual(self.request)
-        garantir_limite_entidade(organizacao, "partidas")
+        try:
+            garantir_limite_entidade(organizacao, "partidas")
+        except ValidationError as exc:
+            registrar_limite_bloqueado(
+                organizacao=organizacao,
+                usuario=self.request.user,
+                chave="partidas",
+                detalhe="Tentativa de criar partida acima do limite do plano.",
+            )
+            raise exc
         arquivo_video = serializer.validated_data.get("arquivo_video")
         if arquivo_video is not None:
-            garantir_limite_armazenamento(organizacao, getattr(arquivo_video, "size", 0))
-        serializer.save(organizacao=organizacao)
+            try:
+                garantir_limite_armazenamento(organizacao, getattr(arquivo_video, "size", 0))
+            except ValidationError as exc:
+                registrar_limite_bloqueado(
+                    organizacao=organizacao,
+                    usuario=self.request.user,
+                    chave="armazenamento",
+                    detalhe="Tentativa de upload acima do limite de armazenamento do plano.",
+                )
+                raise exc
+        partida = serializer.save(organizacao=organizacao)
+        registrar_auditoria(
+            organizacao=organizacao,
+            usuario=self.request.user,
+            acao=AuditLog.ACAO_PARTIDA_CRIADA,
+            recurso_tipo="partida",
+            recurso_id=partida.id,
+            descricao="Nova partida cadastrada.",
+            metadata={"competicao": partida.competicao},
+        )
 
     @action(detail=True, methods=["get"], url_path="eventos")
     def eventos(self, request, pk=None):

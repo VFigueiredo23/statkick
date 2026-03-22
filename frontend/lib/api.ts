@@ -91,6 +91,17 @@ export type OnboardingEtapaPayload = {
   concluido: boolean;
 };
 
+export type AuditLogPayload = {
+  id: number;
+  acao: string;
+  recurso_tipo: string;
+  recurso_id: string;
+  descricao: string;
+  metadata: Record<string, unknown>;
+  criado_em: string;
+  usuario: UsuarioLogado | null;
+};
+
 export type MembroOrganizacaoPayload = {
   id: number;
   papel: string;
@@ -643,5 +654,13 @@ export async function aceitarConviteOrganizacao(token: string): Promise<MembroOr
     throw new Error(await lerErro(resposta, "Falha ao aceitar convite."));
   }
 
+  return resposta.json();
+}
+
+export async function listarAuditoriaOrganizacaoAtual(): Promise<AuditLogPayload[]> {
+  const resposta = await apiFetch("/organizacoes/atual/auditoria", { cache: "no-store" });
+  if (!resposta.ok) {
+    throw new Error(await lerErro(resposta, "Falha ao carregar auditoria."));
+  }
   return resposta.json();
 }

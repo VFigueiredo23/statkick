@@ -5,8 +5,9 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from organizacoes.auditoria import registrar_auditoria
 from organizacoes.contexto import garantir_membro_na_organizacao_default
-from organizacoes.models import MembroOrganizacao, Organizacao
+from organizacoes.models import AuditLog, MembroOrganizacao, Organizacao
 from usuarios.models import Usuario
 from usuarios.serializers import (
     AuthLoginSerializer,
@@ -58,6 +59,15 @@ class AuthRegisterView(APIView):
             papel=MembroOrganizacao.PAPEL_OWNER,
             ativo=True,
         )
+        registrar_auditoria(
+            organizacao=organizacao,
+            usuario=usuario,
+            acao=AuditLog.ACAO_AUTH_REGISTER,
+            recurso_tipo="usuario",
+            recurso_id=usuario.id,
+            descricao="Novo workspace criado no fluxo de cadastro.",
+            metadata={"email": usuario.email},
+        )
         token = Token.objects.create(user=usuario)
 
         return Response(
@@ -88,6 +98,17 @@ class AuthLoginView(APIView):
 
         Token.objects.filter(user=usuario).delete()
         token = Token.objects.create(user=usuario)
+        membro_atual = garantir_membro_na_organizacao_default(usuario)
+        if membro_atual is not None:
+            registrar_auditoria(
+                organizacao=membro_atual.organizacao,
+                usuario=usuario,
+                acao=AuditLog.ACAO_AUTH_LOGIN,
+                recurso_tipo="usuario",
+                recurso_id=usuario.id,
+                descricao="Usuario autenticado com sucesso.",
+                metadata={"email": usuario.email},
+            )
 
         return Response(
             {

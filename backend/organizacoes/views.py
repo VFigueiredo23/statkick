@@ -7,11 +7,13 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from organizacoes.auditoria import registrar_auditoria
 from organizacoes.contexto import obter_membro_atual, obter_organizacao_atual
 from organizacoes.limites import garantir_limite_membros
-from organizacoes.models import ConviteOrganizacao, MembroOrganizacao
+from organizacoes.models import AuditLog, ConviteOrganizacao, MembroOrganizacao
 from organizacoes.permissoes import CanManageOrganization, IsOrganizacaoMembro
 from organizacoes.serializers import (
+    AuditLogSerializer,
     ConviteOrganizacaoCriacaoSerializer,
     ConviteOrganizacaoSerializer,
     ConvitePublicoSerializer,
@@ -57,7 +59,17 @@ class OrganizacaoAtualView(APIView):
 
         serializer = OrganizacaoAtualizacaoSerializer(organizacao, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        nome_anterior = organizacao.nome
         serializer.save()
+        registrar_auditoria(
+            organizacao=organizacao,
+            usuario=request.user,
+            acao=AuditLog.ACAO_ORGANIZACAO_ATUALIZADA,
+            recurso_tipo="organizacao",
+            recurso_id=organizacao.id,
+            descricao="Dados da organizacao atualizados.",
+            metadata={"nome_anterior": nome_anterior, "nome_atual": organizacao.nome},
+        )
         return Response(OrganizacaoDetalheSerializer(organizacao, context={"request": request}).data)
 
 
@@ -101,6 +113,19 @@ class OrganizacaoMembroDetalheView(APIView):
         for campo, valor in dados.items():
             setattr(membro_alvo, campo, valor)
         membro_alvo.save(update_fields=[*dados.keys()])
+        registrar_auditoria(
+            organizacao=organizacao,
+            usuario=request.user,
+            acao=AuditLog.ACAO_MEMBRO_ATUALIZADO,
+            recurso_tipo="membro",
+            recurso_id=membro_alvo.id,
+            descricao="Membro atualizado na organizacao.",
+            metadata={
+                "membro_email": membro_alvo.usuario.email,
+                "papel": membro_alvo.papel,
+                "ativo": membro_alvo.ativo,
+            },
+        )
 
         return Response(MembroOrganizacaoSerializer(membro_alvo).data)
 
@@ -135,6 +160,15 @@ class OrganizacaoConvitesView(APIView):
             papel=serializer.validated_data["papel"],
             criado_por=request.user,
             expira_em=timezone.now() + timedelta(days=7),
+        )
+        registrar_auditoria(
+            organizacao=organizacao,
+            usuario=request.user,
+            acao=AuditLog.ACAO_CONVITE_CRIADO,
+            recurso_tipo="convite",
+            recurso_id=convite.id,
+            descricao="Novo convite criado para a organizacao.",
+            metadata={"email": convite.email, "papel": convite.papel, "token": str(convite.token)},
         )
 
         return Response(
@@ -201,6 +235,15 @@ class ConviteAceitarView(APIView):
         convite.aceito_por = request.user
         convite.respondido_em = timezone.now()
         convite.save(update_fields=["status", "aceito_por", "respondido_em"])
+        registrar_auditoria(
+            organizacao=convite.organizacao,
+            usuario=request.user,
+            acao=AuditLog.ACAO_CONVITE_ACEITO,
+            recurso_tipo="convite",
+            recurso_id=convite.id,
+            descricao="Convite aceito e membro vinculado a organizacao.",
+            metadata={"email": convite.email, "papel": convite.papel},
+        )
 
         return Response(MembroOrganizacaoSerializer(membro).data)
 
@@ -220,4 +263,22 @@ class ConviteCancelarView(APIView):
         convite.status = ConviteOrganizacao.STATUS_CANCELADO
         convite.respondido_em = timezone.now()
         convite.save(update_fields=["status", "respondido_em"])
+        registrar_auditoria(
+            organizacao=organizacao,
+            usuario=request.user,
+            acao=AuditLog.ACAO_CONVITE_CANCELADO,
+            recurso_tipo="convite",
+            recurso_id=convite.id,
+            descricao="Convite cancelado.",
+            metadata={"email": convite.email, "papel": convite.papel},
+        )
         return Response(ConviteOrganizacaoSerializer(convite, context={"request": request}).data)
+
+
+class OrganizacaoAuditoriaView(APIView):
+    permission_classes = [IsOrganizacaoMembro]
+
+    def get(self, request):
+        organizacao = obter_organizacao_atual(request)
+        logs = organizacao.auditorias.select_related("usuario").all()[:50]
+        return Response(AuditLogSerializer(logs, many=True).data)

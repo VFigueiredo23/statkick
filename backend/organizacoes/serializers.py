@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from organizacoes.contexto import obter_membro_atual, obter_organizacao_atual
 from organizacoes.limites import calcular_uso_organizacao
-from organizacoes.models import ConviteOrganizacao, MembroOrganizacao, Organizacao
+from organizacoes.models import AuditLog, ConviteOrganizacao, MembroOrganizacao, Organizacao
 from usuarios.models import Usuario
 from usuarios.serializers import UsuarioSerializer
 
@@ -155,3 +155,20 @@ class ConvitePublicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConviteOrganizacao
         fields = ["email", "papel", "status", "expira_em", "criado_em", "organizacao"]
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    usuario = UsuarioSerializer(read_only=True)
+
+    class Meta:
+        model = AuditLog
+        fields = [
+            "id",
+            "acao",
+            "recurso_tipo",
+            "recurso_id",
+            "descricao",
+            "metadata",
+            "criado_em",
+            "usuario",
+        ]

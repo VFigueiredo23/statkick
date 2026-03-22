@@ -2,7 +2,9 @@ from rest_framework import mixins, viewsets
 
 from eventos.models import Evento
 from eventos.serializers import EventoSerializer
+from organizacoes.auditoria import registrar_auditoria
 from organizacoes.contexto import obter_organizacao_atual
+from organizacoes.models import AuditLog
 from organizacoes.permissoes import CanAccessScoutingData
 
 
@@ -24,4 +26,14 @@ class EventoViewSet(
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(organizacao=obter_organizacao_atual(self.request))
+        organizacao = obter_organizacao_atual(self.request)
+        evento = serializer.save(organizacao=organizacao)
+        registrar_auditoria(
+            organizacao=organizacao,
+            usuario=self.request.user,
+            acao=AuditLog.ACAO_EVENTO_CRIADO,
+            recurso_tipo="evento",
+            recurso_id=evento.id,
+            descricao="Novo evento registrado na analise.",
+            metadata={"tipo_evento": evento.tipo_evento, "partida_id": evento.partida_id},
+        )
