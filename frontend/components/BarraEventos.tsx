@@ -1,5 +1,7 @@
 "use client";
 
+import { EVENTO_ATALHO_MAPA } from "@/lib/atalhos-analise";
+
 const GRUPOS_EVENTO = [
   {
     titulo: "Construcao",
@@ -49,7 +51,14 @@ export default function BarraEventos({ aoSelecionarEvento, desabilitado = false 
                   className="rounded-xl border border-slate-700 bg-slate-950/60 px-3 py-2.5 text-left text-sm font-medium text-slate-200 transition hover:border-accent hover:bg-accent/10 hover:text-white disabled:opacity-50"
                   onClick={() => aoSelecionarEvento(tipo)}
                 >
-                  {tipo}
+                  <span className="flex items-center justify-between gap-3">
+                    <span>{tipo}</span>
+                    {EVENTO_ATALHO_MAPA[tipo] && (
+                      <span className="rounded-md border border-slate-700 bg-slate-900/70 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                        {EVENTO_ATALHO_MAPA[tipo]}
+                      </span>
+                    )}
+                  </span>
                 </button>
               ))}
             </div>

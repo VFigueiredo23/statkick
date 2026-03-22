@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { EVENTO_ATALHO_MAPA } from "@/lib/atalhos-analise";
 import { Equipe, Jogador } from "@/lib/api";
 
 import { ConfiguracaoEquipeAnalise } from "@/components/ModalConfiguracaoAnalise";
@@ -115,7 +116,14 @@ export default function PainelContextoAnalise({
                 onClick={() => aoMarcarEventoNaZona(acao)}
                 className="rounded-xl border border-slate-700 bg-slate-950/55 px-3 py-2 text-left text-sm font-medium text-slate-200 transition hover:border-accent hover:bg-accent/10 hover:text-white disabled:opacity-45"
               >
-                {acao}
+                <span className="flex items-center justify-between gap-3">
+                  <span>{acao}</span>
+                  {EVENTO_ATALHO_MAPA[acao] && (
+                    <span className="rounded-md border border-slate-700 bg-slate-900/70 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                      {EVENTO_ATALHO_MAPA[acao]}
+                    </span>
+                  )}
+                </span>
               </button>
             ))}
           </div>

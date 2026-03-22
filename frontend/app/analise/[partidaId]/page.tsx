@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/AuthProvider";
 import BarraEventos from "@/components/BarraEventos";
@@ -10,6 +10,7 @@ import ModalConfiguracaoAnalise, { ConfiguracaoEquipeAnalise } from "@/component
 import PainelAnaliseEspacial from "@/components/PainelAnaliseEspacial";
 import PainelContextoAnalise from "@/components/PainelContextoAnalise";
 import ReprodutorVideo from "@/components/ReprodutorVideo";
+import { EVENTO_ATALHOS } from "@/lib/atalhos-analise";
 import {
   Equipe,
   Evento,
@@ -26,6 +27,11 @@ import {
 type PaginaAnaliseProps = {
   params: Promise<{ partidaId: string }>;
 };
+
+function alvoEditavel(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
+}
 
 function formatarCronometro(segundos: number): string {
   const minutos = Math.floor(segundos / 60)
@@ -153,7 +159,7 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
     setJogadorAtivoId(null);
   };
 
-  const marcarEventoRapido = async (tipoEvento: string) => {
+  const marcarEventoRapido = useCallback(async (tipoEvento: string) => {
     if (!partida) return;
     if (!podeEditarConteudo) {
       setErroOperacao("Seu papel atual permite apenas visualizar a analise.");
@@ -208,7 +214,26 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
     } finally {
       setSalvandoEvento(false);
     }
-  };
+  }, [configuracoesAnalise, equipeAtivaId, equipes, jogadoresDaPartida, partida, podeEditarConteudo, posicaoSelecionada, segundosVideo]);
+
+  useEffect(() => {
+    const mapaEventos = Object.fromEntries(EVENTO_ATALHOS.map((item) => [item.tecla, item.tipo])) as Record<string, string>;
+
+    const aoPressionarTecla = (evento: KeyboardEvent) => {
+      if (alvoEditavel(evento.target) || evento.metaKey || evento.ctrlKey || evento.altKey) {
+        return;
+      }
+
+      const tipoEvento = mapaEventos[evento.key];
+      if (!tipoEvento) return;
+
+      evento.preventDefault();
+      void marcarEventoRapido(tipoEvento);
+    };
+
+    window.addEventListener("keydown", aoPressionarTecla);
+    return () => window.removeEventListener("keydown", aoPressionarTecla);
+  }, [marcarEventoRapido]);
 
   const cadastrarJogadorRapido = async ({
     equipeId,
@@ -324,6 +349,11 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
                   <p className="mt-2 text-sm font-medium text-white">{podeEditarConteudo ? "Analise ativa" : "Somente leitura"}</p>
                 </div>
               </div>
+            </div>
+
+            <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-950/45 px-4 py-3 text-xs text-slate-400">
+              Atalhos da analise: `1-8` eventos rapidos, `Espaco/K` play-pause, `J/L` -5s/+5s, `Setas` -2s/+2s, `V/H/A/L/S/B/R`
+              trocam ferramentas, `P` fixa ponto do holofote e `Delete` remove a marcacao selecionada.
             </div>
 
             <ReprodutorVideo url={partida.url_video} aoAtualizarTempo={setSegundosVideo} />

@@ -40,11 +40,25 @@ read_env_value() {
 }
 
 configure_deploy_mode() {
+  local app_domain=""
+  local api_domain=""
+
   if [[ -z "$DEPLOY_TARGET_MODE" ]]; then
     DEPLOY_TARGET_MODE="$(read_env_value DEPLOY_TARGET_MODE)"
   fi
 
+  app_domain="$(read_env_value APP_DOMAIN)"
+  api_domain="$(read_env_value API_DOMAIN)"
+
   if [[ "$DEPLOY_TARGET_MODE" == "ip" ]]; then
+    compose_args=(-f docker-compose.yml -f docker-compose.vps-ip.yml)
+    log_services=(backend frontend)
+    return
+  fi
+
+  if [[ -z "$DEPLOY_TARGET_MODE" && -z "$app_domain" && -z "$api_domain" ]]; then
+    log "sem dominio configurado; usando fallback automatico para modo ip"
+    DEPLOY_TARGET_MODE="ip"
     compose_args=(-f docker-compose.yml -f docker-compose.vps-ip.yml)
     log_services=(backend frontend)
     return

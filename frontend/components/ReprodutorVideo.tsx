@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import OverlayTaticoVideo from "@/components/OverlayTaticoVideo";
 
@@ -55,6 +55,11 @@ declare global {
 }
 
 let promessaApiYoutube: Promise<YouTubeNamespace> | null = null;
+
+function alvoEditavel(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
+}
 
 function carregarApiYoutube(): Promise<YouTubeNamespace> {
   if (typeof window === "undefined") {
@@ -244,7 +249,7 @@ export default function ReprodutorVideo({ url, aoAtualizarTempo }: ReprodutorVid
     }
   }, [ehYoutube, velocidade]);
 
-  const alternarPlayPause = async () => {
+  const alternarPlayPause = useCallback(async () => {
     if (ehYoutube) {
       const player = referenciaPlayerYoutube.current;
       if (!player) return;
@@ -268,9 +273,9 @@ export default function ReprodutorVideo({ url, aoAtualizarTempo }: ReprodutorVid
     }
     await referenciaVideo.current.play();
     setEstaTocando(true);
-  };
+  }, [ehYoutube, estaTocando]);
 
-  const buscarTempo = (valor: number) => {
+  const buscarTempo = useCallback((valor: number) => {
     if (ehYoutube) {
       const player = referenciaPlayerYoutube.current;
       if (!player) return;
@@ -284,11 +289,65 @@ export default function ReprodutorVideo({ url, aoAtualizarTempo }: ReprodutorVid
     referenciaVideo.current.currentTime = valor;
     setTempoAtual(valor);
     aoAtualizarTempo(valor);
-  };
+  }, [aoAtualizarTempo, ehYoutube]);
 
-  const alterarVelocidade = (valor: number) => {
+  const alterarVelocidade = useCallback((valor: number) => {
     setVelocidade(valor);
-  };
+  }, []);
+
+  useEffect(() => {
+    const aoPressionarTecla = (evento: KeyboardEvent) => {
+      if (alvoEditavel(evento.target) || evento.metaKey || evento.ctrlKey || evento.altKey) {
+        return;
+      }
+
+      const tecla = evento.key.toLowerCase();
+
+      if (tecla === " " || tecla === "k") {
+        evento.preventDefault();
+        void alternarPlayPause();
+        return;
+      }
+
+      if (tecla === "j") {
+        evento.preventDefault();
+        buscarTempo(Math.max(0, tempoAtual - 5));
+        return;
+      }
+
+      if (tecla === "l") {
+        evento.preventDefault();
+        buscarTempo(Math.min(duracao || tempoAtual + 5, tempoAtual + 5));
+        return;
+      }
+
+      if (evento.key === "ArrowLeft") {
+        evento.preventDefault();
+        buscarTempo(Math.max(0, tempoAtual - 2));
+        return;
+      }
+
+      if (evento.key === "ArrowRight") {
+        evento.preventDefault();
+        buscarTempo(Math.min(duracao || tempoAtual + 2, tempoAtual + 2));
+        return;
+      }
+
+      if (tecla === ",") {
+        evento.preventDefault();
+        alterarVelocidade(Math.max(0.5, velocidade - 0.25));
+        return;
+      }
+
+      if (tecla === ".") {
+        evento.preventDefault();
+        alterarVelocidade(Math.min(2, velocidade + 0.25));
+      }
+    };
+
+    window.addEventListener("keydown", aoPressionarTecla);
+    return () => window.removeEventListener("keydown", aoPressionarTecla);
+  }, [alternarPlayPause, buscarTempo, duracao, tempoAtual, velocidade, alterarVelocidade]);
 
   return (
     <section className="rounded-xl border border-slate-700 bg-panel p-4">
@@ -350,6 +409,10 @@ export default function ReprodutorVideo({ url, aoAtualizarTempo }: ReprodutorVid
               <option value={2}>2x</option>
             </select>
           </label>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-950/45 px-3 py-2 text-xs text-slate-400">
+          Atalhos do video: `Espaco/K` play-pause, `J/L` -5s/+5s, `Setas` -2s/+2s, `,` e `.` ajustam a velocidade.
         </div>
 
         {erro && <p className="rounded border border-amber-500/40 bg-amber-950/30 p-3 text-sm text-amber-200">{erro}</p>}

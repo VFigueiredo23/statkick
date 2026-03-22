@@ -1,6 +1,8 @@
 "use client";
 
-import { PointerEvent, useEffect, useId, useMemo, useState } from "react";
+import { PointerEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
+
+import { FERRAMENTA_ATALHOS } from "@/lib/atalhos-analise";
 
 type FerramentaDesenho = "cursor" | "linha" | "seta" | "rota" | "retangulo" | "holofote" | "anel";
 
@@ -28,7 +30,6 @@ type ArrasteAtivo = {
   origem: Ponto;
   inicioOriginal: Ponto;
   fimOriginal: Ponto;
-  tempo?: number;
   raioOriginal?: number;
   modo?: "shape" | "holofote";
 };
@@ -48,6 +49,11 @@ function limitar(valor: number) {
   return Math.max(0, Math.min(100, Number(valor.toFixed(2))));
 }
 
+function alvoEditavel(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
+}
+
 function obterPonto(evento: PointerEvent<SVGSVGElement>): Ponto {
   const rect = evento.currentTarget.getBoundingClientRect();
   return {
@@ -58,6 +64,21 @@ function obterPonto(evento: PointerEvent<SVGSVGElement>): Ponto {
 
 function calcularRaio(anotacao: Anotacao) {
   return Math.max(Math.abs(anotacao.fim.x - anotacao.inicio.x), Math.abs(anotacao.fim.y - anotacao.inicio.y), 4);
+}
+
+function upsertHolofoteKeyframe(anotacao: Anotacao, tempoAtual: number, ponto: Ponto, raio: number) {
+  const tempoNormalizado = Number(tempoAtual.toFixed(2));
+  const tolerancia = 0.12;
+
+  return [
+    ...(anotacao.keyframes ?? []).filter((frame) => Math.abs(frame.tempo - tempoNormalizado) > tolerancia),
+    {
+      tempo: tempoNormalizado,
+      x: limitar(ponto.x),
+      y: limitar(ponto.y),
+      raio,
+    },
+  ].sort((a, b) => a.tempo - b.tempo);
 }
 
 function obterEstadoHolofote(anotacao: Anotacao, tempoAtual: number) {
@@ -190,6 +211,9 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
   const [selecionadaId, setSelecionadaId] = useState<number | null>(null);
   const [arrasteAtivo, setArrasteAtivo] = useState<ArrasteAtivo | null>(null);
   const markerId = `arrowhead-${useId().replace(/:/g, "")}`;
+  const anotacaoSelecionada = useMemo(() => anotacoes.find((item) => item.id === selecionadaId) ?? null, [anotacoes, selecionadaId]);
+  const holofoteSelecionado = anotacaoSelecionada?.ferramenta === "holofote" ? anotacaoSelecionada : null;
+  const totalPontosHolofote = holofoteSelecionado?.keyframes?.length ?? 0;
 
   useEffect(() => {
     setAnotacoes([]);
@@ -242,15 +266,15 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
             ? arrasteAtivo.modo === "holofote"
               ? {
                   ...item,
-                  keyframes: [
-                    ...(item.keyframes ?? []).filter((frame) => Math.abs(frame.tempo - (arrasteAtivo.tempo ?? tempoAtual)) > 0.05),
+                  keyframes: upsertHolofoteKeyframe(
+                    item,
+                    tempoAtual,
                     {
-                      tempo: arrasteAtivo.tempo ?? tempoAtual,
-                      x: limitar(arrasteAtivo.inicioOriginal.x + deltaX),
-                      y: limitar(arrasteAtivo.inicioOriginal.y + deltaY),
-                      raio: arrasteAtivo.raioOriginal ?? calcularRaio(item),
+                      x: arrasteAtivo.inicioOriginal.x + deltaX,
+                      y: arrasteAtivo.inicioOriginal.y + deltaY,
                     },
-                  ].sort((a, b) => a.tempo - b.tempo),
+                    arrasteAtivo.raioOriginal ?? calcularRaio(item)
+                  ),
                 }
               : {
                 ...item,
@@ -287,14 +311,12 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
       fim: ponto,
       keyframes:
         rascunho.ferramenta === "holofote"
-          ? [
-              {
-                tempo: tempoAtual,
-                x: rascunho.inicio.x,
-                y: rascunho.inicio.y,
-                raio: Math.max(Math.abs(ponto.x - rascunho.inicio.x), Math.abs(ponto.y - rascunho.inicio.y), 4),
-              },
-            ]
+          ? upsertHolofoteKeyframe(
+              rascunho,
+              tempoAtual,
+              rascunho.inicio,
+              Math.max(Math.abs(ponto.x - rascunho.inicio.x), Math.abs(ponto.y - rascunho.inicio.y), 4)
+            )
           : rascunho.keyframes,
     };
     setAnotacoes((atual) => [...atual, final]);
@@ -316,16 +338,66 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
       origem: ponto,
       inicioOriginal: estadoHolofote ? { x: estadoHolofote.x, y: estadoHolofote.y } : anotacao.inicio,
       fimOriginal: estadoHolofote ? { x: estadoHolofote.x + estadoHolofote.raio, y: estadoHolofote.y + estadoHolofote.raio } : anotacao.fim,
-      tempo: anotacao.ferramenta === "holofote" ? tempoAtual : undefined,
       raioOriginal: estadoHolofote?.raio,
       modo: anotacao.ferramenta === "holofote" ? "holofote" : "shape",
     });
   };
 
-  const excluirAnotacao = (id: number) => {
+  const excluirAnotacao = useCallback((id: number) => {
     setAnotacoes((atual) => atual.filter((item) => item.id !== id));
     setSelecionadaId((atual) => (atual === id ? null : atual));
-  };
+  }, []);
+
+  const fixarPontoHolofoteAtual = useCallback(() => {
+    if (!holofoteSelecionado) return;
+    const estadoAtual = obterEstadoHolofote(holofoteSelecionado, tempoAtual);
+    setAnotacoes((atual) =>
+      atual.map((item) =>
+        item.id === holofoteSelecionado.id
+          ? {
+              ...item,
+              keyframes: upsertHolofoteKeyframe(item, tempoAtual, { x: estadoAtual.x, y: estadoAtual.y }, estadoAtual.raio),
+            }
+          : item
+      )
+    );
+  }, [holofoteSelecionado, tempoAtual]);
+
+  useEffect(() => {
+    const mapaFerramentas = Object.fromEntries(FERRAMENTA_ATALHOS.map((item) => [item.tecla.toLowerCase(), item.ferramenta])) as Record<string, FerramentaDesenho>;
+
+    const aoPressionarTecla = (evento: KeyboardEvent) => {
+      if (alvoEditavel(evento.target) || evento.metaKey || evento.ctrlKey || evento.altKey) {
+        return;
+      }
+
+      const tecla = evento.key.toLowerCase();
+
+      if (tecla === "escape") {
+        setSelecionadaId(null);
+        return;
+      }
+
+      if ((tecla === "backspace" || tecla === "delete") && selecionadaId !== null) {
+        evento.preventDefault();
+        excluirAnotacao(selecionadaId);
+        return;
+      }
+
+      if (tecla === "p" && holofoteSelecionado) {
+        evento.preventDefault();
+        fixarPontoHolofoteAtual();
+        return;
+      }
+
+      if (mapaFerramentas[tecla]) {
+        setFerramenta(mapaFerramentas[tecla]);
+      }
+    };
+
+    window.addEventListener("keydown", aoPressionarTecla);
+    return () => window.removeEventListener("keydown", aoPressionarTecla);
+  }, [excluirAnotacao, fixarPontoHolofoteAtual, holofoteSelecionado, selecionadaId, tempoAtual]);
 
   return (
     <>
@@ -420,9 +492,23 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
         )}
       </svg>
 
-      <div className="absolute bottom-3 left-3 z-20 rounded-full border border-slate-800/90 bg-slate-950/75 px-3 py-1.5 text-xs text-slate-300 backdrop-blur">
-        Use o cursor para selecionar, arrastar e remover. No holofote, reposicione em tempos diferentes para ele acompanhar o lance.
+      <div className="absolute bottom-3 left-3 z-20 max-w-[58%] rounded-2xl border border-slate-800/90 bg-slate-950/75 px-3 py-2 text-xs text-slate-300 backdrop-blur">
+        Use `V/H/A/L/S/B/R` para trocar a ferramenta. No holofote, deixe o video rodar e arraste acompanhando o jogador para gravar a trilha; `P` fixa um ponto no tempo atual.
       </div>
+
+      {holofoteSelecionado && (
+        <div className="absolute right-3 top-16 z-20 rounded-2xl border border-slate-800/90 bg-slate-950/82 px-3 py-2 text-xs text-slate-300 backdrop-blur">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Tracking assistido</p>
+          <p className="mt-1">Holofote #{holofoteSelecionado.id} com {totalPontosHolofote} ponto(s)</p>
+          <button
+            type="button"
+            onClick={fixarPontoHolofoteAtual}
+            className="mt-2 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent"
+          >
+            Fixar ponto (P)
+          </button>
+        </div>
+      )}
 
       {!!anotacoesOrdenadas.length && (
         <div className="absolute bottom-3 right-3 z-20 max-w-[48%] rounded-2xl border border-slate-800/90 bg-slate-950/82 p-3 backdrop-blur">
