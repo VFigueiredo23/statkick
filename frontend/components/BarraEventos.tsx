@@ -23,18 +23,23 @@ const GRUPOS_EVENTO = [
 type BarraEventosProps = {
   aoSelecionarEvento: (tipoEvento: string) => void;
   desabilitado?: boolean;
+  compacto?: boolean;
 };
 
-export default function BarraEventos({ aoSelecionarEvento, desabilitado = false }: BarraEventosProps) {
+export default function BarraEventos({ aoSelecionarEvento, desabilitado = false, compacto = false }: BarraEventosProps) {
   return (
-    <aside className="rounded-[28px] border border-slate-700/70 bg-panel p-4 shadow-[0_14px_40px_rgba(2,6,23,0.22)]">
-      <div className="mb-4">
+    <aside
+      className={`rounded-[28px] border border-slate-700/70 bg-panel shadow-[0_14px_40px_rgba(2,6,23,0.22)] ${
+        compacto ? "p-3" : "p-4"
+      }`}
+    >
+      <div className={compacto ? "mb-3" : "mb-4"}>
         <p className="text-[11px] uppercase tracking-[0.35em] text-slate-400">Marcacao Rapida</p>
-        <h2 className="mt-2 text-xl font-semibold text-white">Eventos do analista</h2>
+        <h2 className={`mt-2 font-semibold text-white ${compacto ? "text-lg" : "text-xl"}`}>Eventos do analista</h2>
         <p className="mt-1 text-sm text-slate-400">Escolha o alvo uma vez e clique no evento para registrar o lance.</p>
       </div>
 
-      <div className="space-y-4">
+      <div className={`space-y-3 ${compacto ? "max-h-[520px] overflow-y-auto pr-1" : ""}`}>
         {GRUPOS_EVENTO.map((grupo) => (
           <section key={grupo.titulo} className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3">
             <div className="mb-3">
@@ -42,13 +47,15 @@ export default function BarraEventos({ aoSelecionarEvento, desabilitado = false 
               <p className="text-xs text-slate-500">{grupo.descricao}</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-2">
+            <div className={`grid gap-2 ${compacto ? "grid-cols-2" : "grid-cols-1"}`}>
               {grupo.eventos.map((tipo) => (
                 <button
                   key={tipo}
                   type="button"
                   disabled={desabilitado}
-                  className="rounded-xl border border-slate-700 bg-slate-950/60 px-3 py-2.5 text-left text-sm font-medium text-slate-200 transition hover:border-accent hover:bg-accent/10 hover:text-white disabled:opacity-50"
+                  className={`rounded-xl border border-slate-700 bg-slate-950/60 text-left font-medium text-slate-200 transition hover:border-accent hover:bg-accent/10 hover:text-white disabled:opacity-50 ${
+                    compacto ? "px-2.5 py-2 text-[13px]" : "px-3 py-2.5 text-sm"
+                  }`}
                   onClick={() => aoSelecionarEvento(tipo)}
                 >
                   <span className="flex items-center justify-between gap-3">

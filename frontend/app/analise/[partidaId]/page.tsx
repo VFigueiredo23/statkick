@@ -301,24 +301,21 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
 
       <div className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="xl:sticky xl:top-6 xl:self-start">
-          <div className="flex flex-col gap-5">
-            <PainelContextoAnalise
-              equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
-              jogadores={jogadoresDaPartida}
-              configuracoes={configuracoesAnalise}
-              equipeAtivaId={equipeAtivaId}
-              jogadorAtivoId={jogadorAtivoId}
-              zonaAtual={posicaoSelecionada}
-              aoSelecionarEquipe={selecionarEquipeAtiva}
-              aoSelecionarJogador={setJogadorAtivoId}
-              aoMarcarEventoNaZona={marcarEventoRapido}
-              aoReconfigurar={() => setModalConfiguracaoAberto(true)}
-              salvandoEvento={salvandoEvento}
-              feedback={feedbackEvento}
-              podeEditarConteudo={podeEditarConteudo}
-            />
-            <BarraEventos aoSelecionarEvento={marcarEventoRapido} desabilitado={!podeEditarConteudo} />
-          </div>
+          <PainelContextoAnalise
+            equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
+            jogadores={jogadoresDaPartida}
+            configuracoes={configuracoesAnalise}
+            equipeAtivaId={equipeAtivaId}
+            jogadorAtivoId={jogadorAtivoId}
+            zonaAtual={posicaoSelecionada}
+            aoSelecionarEquipe={selecionarEquipeAtiva}
+            aoSelecionarJogador={setJogadorAtivoId}
+            aoMarcarEventoNaZona={marcarEventoRapido}
+            aoReconfigurar={() => setModalConfiguracaoAberto(true)}
+            salvandoEvento={salvandoEvento}
+            feedback={feedbackEvento}
+            podeEditarConteudo={podeEditarConteudo}
+          />
         </aside>
 
         <section className="flex min-w-0 flex-col gap-5">
@@ -356,7 +353,28 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
               trocam ferramentas, `P` fixa ponto do holofote e `Delete` remove a marcacao selecionada.
             </div>
 
-            <ReprodutorVideo url={partida.url_video} aoAtualizarTempo={setSegundosVideo} />
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-w-0">
+                <ReprodutorVideo url={partida.url_video} aoAtualizarTempo={setSegundosVideo} />
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-5">
+                <PainelAnaliseEspacial
+                  equipes={equipes.filter((equipe) => equipe.id === partida.equipe_casa || equipe.id === partida.equipe_fora)}
+                  jogadores={jogadoresDaPartida}
+                  eventos={eventos}
+                  equipeAtivaId={equipeAtivaId}
+                  jogadorAtivoId={jogadorAtivoId}
+                  posicaoSelecionada={posicaoSelecionada}
+                  aoSelecionarPosicao={setPosicaoSelecionada}
+                  aoLimparPosicao={() => setPosicaoSelecionada(null)}
+                  mostrarMapaCalor={false}
+                  compacto
+                />
+
+                <BarraEventos aoSelecionarEvento={marcarEventoRapido} desabilitado={!podeEditarConteudo} compacto />
+              </div>
+            </div>
           </section>
 
           <PainelAnaliseEspacial
@@ -368,6 +386,7 @@ export default function PaginaAnalise({ params }: PaginaAnaliseProps) {
             posicaoSelecionada={posicaoSelecionada}
             aoSelecionarPosicao={setPosicaoSelecionada}
             aoLimparPosicao={() => setPosicaoSelecionada(null)}
+            mostrarZonaAtual={false}
           />
 
           <LinhaTempoEventos eventos={eventos} />
