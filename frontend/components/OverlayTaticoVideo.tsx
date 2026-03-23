@@ -210,6 +210,7 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
   const [contador, setContador] = useState(1);
   const [selecionadaId, setSelecionadaId] = useState<number | null>(null);
   const [arrasteAtivo, setArrasteAtivo] = useState<ArrasteAtivo | null>(null);
+  const [painelMinimizado, setPainelMinimizado] = useState(false);
   const markerId = `arrowhead-${useId().replace(/:/g, "")}`;
   const anotacaoSelecionada = useMemo(() => anotacoes.find((item) => item.id === selecionadaId) ?? null, [anotacoes, selecionadaId]);
   const holofoteSelecionado = anotacaoSelecionada?.ferramenta === "holofote" ? anotacaoSelecionada : null;
@@ -222,6 +223,7 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
     setContador(1);
     setSelecionadaId(null);
     setArrasteAtivo(null);
+    setPainelMinimizado(false);
   }, [resetKey]);
 
   const anotacoesOrdenadas = useMemo(() => [...anotacoes].sort((a, b) => b.id - a.id), [anotacoes]);
@@ -401,53 +403,78 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
 
   return (
     <>
-      <div className="absolute left-3 right-3 top-3 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-800/90 bg-slate-950/80 px-3 py-2 backdrop-blur">
-        <span className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Quadro tatico</span>
-        {[
-          { id: "cursor", label: "Cursor" },
-          { id: "anel", label: "Anel" },
-          { id: "linha", label: "Linha" },
-          { id: "seta", label: "Seta" },
-          { id: "rota", label: "Rota" },
-          { id: "retangulo", label: "Box" },
-          { id: "holofote", label: "Holofote" },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setFerramenta(item.id as FerramentaDesenho)}
-            className={`rounded-full border px-3 py-1.5 text-xs ${
-              ferramenta === item.id ? "border-accent bg-accent/15 text-white" : "border-slate-700 text-slate-300"
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-
-        <div className="ml-auto flex items-center gap-2">
-          {CORES.map((cor) => (
-            <button
-              key={cor}
-              type="button"
-              onClick={() => setCorAtual(cor)}
-              className={`h-6 w-6 rounded-full border ${corAtual === cor ? "border-white" : "border-slate-700"}`}
-              style={{ backgroundColor: cor }}
-              aria-label={`Selecionar cor ${cor}`}
-            />
-          ))}
+      {painelMinimizado ? (
+        <button
+          type="button"
+          onClick={() => setPainelMinimizado(false)}
+          className="absolute left-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-slate-800/90 bg-slate-950/82 text-lg text-slate-100 backdrop-blur"
+          aria-label="Expandir quadro tatico"
+          title="Expandir quadro tatico"
+        >
+          ▸
+        </button>
+      ) : (
+        <div className="absolute left-3 right-3 top-3 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-800/90 bg-slate-950/80 px-3 py-2 backdrop-blur">
           <button
             type="button"
             onClick={() => {
-              setAnotacoes([]);
-              setRascunho(null);
+              setPainelMinimizado(true);
+              setFerramenta("cursor");
               setSelecionadaId(null);
             }}
-            className="rounded-full border border-slate-700 px-3 py-1.5 text-xs text-slate-200"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-sm text-slate-200"
+            aria-label="Minimizar quadro tatico"
+            title="Minimizar quadro tatico"
           >
-            Limpar tudo
+            ◂
           </button>
+          <span className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Quadro tatico</span>
+          {[
+            { id: "cursor", label: "Cursor" },
+            { id: "anel", label: "Anel" },
+            { id: "linha", label: "Linha" },
+            { id: "seta", label: "Seta" },
+            { id: "rota", label: "Rota" },
+            { id: "retangulo", label: "Box" },
+            { id: "holofote", label: "Holofote" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setFerramenta(item.id as FerramentaDesenho)}
+              className={`rounded-full border px-3 py-1.5 text-xs ${
+                ferramenta === item.id ? "border-accent bg-accent/15 text-white" : "border-slate-700 text-slate-300"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+
+          <div className="ml-auto flex items-center gap-2">
+            {CORES.map((cor) => (
+              <button
+                key={cor}
+                type="button"
+                onClick={() => setCorAtual(cor)}
+                className={`h-6 w-6 rounded-full border ${corAtual === cor ? "border-white" : "border-slate-700"}`}
+                style={{ backgroundColor: cor }}
+                aria-label={`Selecionar cor ${cor}`}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setAnotacoes([]);
+                setRascunho(null);
+                setSelecionadaId(null);
+              }}
+              className="rounded-full border border-slate-700 px-3 py-1.5 text-xs text-slate-200"
+            >
+              Limpar tudo
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <svg
         viewBox="0 0 100 100"
@@ -492,11 +519,13 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
         )}
       </svg>
 
-      <div className="absolute bottom-3 left-3 z-20 max-w-[58%] rounded-2xl border border-slate-800/90 bg-slate-950/75 px-3 py-2 text-xs text-slate-300 backdrop-blur">
-        Use `V/H/A/L/S/B/R` para trocar a ferramenta. No holofote, deixe o video rodar e arraste acompanhando o jogador para gravar a trilha; `P` fixa um ponto no tempo atual.
-      </div>
+      {!painelMinimizado && (
+        <div className="absolute bottom-3 left-3 z-20 max-w-[58%] rounded-2xl border border-slate-800/90 bg-slate-950/75 px-3 py-2 text-xs text-slate-300 backdrop-blur">
+          Use `V/H/A/L/S/B/R` para trocar a ferramenta. No holofote, deixe o video rodar e arraste acompanhando o jogador para gravar a trilha; `P` fixa um ponto no tempo atual.
+        </div>
+      )}
 
-      {holofoteSelecionado && (
+      {!painelMinimizado && holofoteSelecionado && (
         <div className="absolute right-3 top-16 z-20 rounded-2xl border border-slate-800/90 bg-slate-950/82 px-3 py-2 text-xs text-slate-300 backdrop-blur">
           <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Tracking assistido</p>
           <p className="mt-1">Holofote #{holofoteSelecionado.id} com {totalPontosHolofote} ponto(s)</p>
@@ -510,7 +539,7 @@ export default function OverlayTaticoVideo({ resetKey, tempoAtual }: { resetKey:
         </div>
       )}
 
-      {!!anotacoesOrdenadas.length && (
+      {!painelMinimizado && !!anotacoesOrdenadas.length && (
         <div className="absolute bottom-3 right-3 z-20 max-w-[48%] rounded-2xl border border-slate-800/90 bg-slate-950/82 p-3 backdrop-blur">
           <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Marcacoes</p>
           <div className="mt-2 max-h-32 space-y-2 overflow-y-auto pr-1">
